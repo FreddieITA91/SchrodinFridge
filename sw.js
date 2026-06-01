@@ -1,4 +1,4 @@
-const CACHE = 'dispensa-v4';
+const CACHE = 'dispensa-v6';
 const ASSETS = [
   '/SchrodinFridge/index.html',
   '/SchrodinFridge/manifest.json',

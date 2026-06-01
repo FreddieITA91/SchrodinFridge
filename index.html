@@ -588,23 +588,38 @@ async function applyExpiry(id,type,expiry){
 //  SUPABASE
 // ═══════════════════════════════════════════
 const SB={
-  async req(method,path,body=null){
+  async req(method,path,body=null,prefer=''){
     if(!cfg.sbUrl||!cfg.sbKey)throw new Error('Supabase non configurato');
     const baseUrl=cfg.sbUrl.replace(/\/+$/,'');
-    const opts={method,headers:{'Content-Type':'application/json','apikey':cfg.sbKey,'Authorization':'Bearer '+cfg.sbKey,'Prefer':'return=minimal'}};
-    if(body)opts.body=JSON.stringify(body);
+    const headers={'Content-Type':'application/json','apikey':cfg.sbKey,'Authorization':'Bearer '+cfg.sbKey};
+    if(prefer)headers['Prefer']=prefer;
+    const opts={method,headers};
+    if(body!==null)opts.body=JSON.stringify(body);
     const r=await fetch(baseUrl+'/rest/v1/'+path,opts);
-    if(!r.ok){const t=await r.text();throw new Error(t);}
+    if(!r.ok){
+      const t=await r.text();
+      throw new Error((t||r.statusText||'Errore Supabase')+' ['+r.status+']');
+    }
     const txt=await r.text();return txt?JSON.parse(txt):null;
   },
-  async upsert(row){return this.req('POST','items?on_conflict=id',[row]);},
-  async delete(id){return this.req('DELETE','items?id=eq.'+id);},
-  async fetchAll(fc){return this.req('GET','items?family_code=eq.'+encodeURIComponent(fc)+'&order=added_at.asc');},
+  // Upsert reale: con PostgREST serve Prefer: resolution=merge-duplicates.
+  // Senza questo header gli UPDATE/ri-salvataggi possono diventare INSERT normali e fallire.
+  async upsert(row){return this.req('POST','items?on_conflict=id',[row],'resolution=merge-duplicates,return=representation');},
+  async delete(id){return this.req('DELETE','items?id=eq.'+encodeURIComponent(id),null,'return=minimal');},
+  async fetchAll(fc){return this.req('GET','items?select=*&family_code=eq.'+encodeURIComponent(fc)+'&order=added_at.asc');},
+  async healthCheck(){return this.req('GET','items?select=id&limit=1');},
   subscribe(fc,onChange){
     if(!cfg.sbUrl||!cfg.sbKey)return null;
     const ws=new WebSocket(cfg.sbUrl.replace('https://','wss://').replace('http://','ws://')+'/realtime/v1/websocket?apikey='+cfg.sbKey+'&vsn=1.0.0');
-    ws.onopen=()=>{ws.send(JSON.stringify({topic:'realtime:public:items:family_code=eq.'+fc,event:'phx_join',payload:{},ref:'1'}));setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:'hb'})),25000);};
-    ws.onmessage=e=>{try{const d=JSON.parse(e.data);if(['INSERT','UPDATE','DELETE'].includes(d.event))onChange(d);}catch(err){}};
+    const topic='realtime:public:items:family_code=eq.'+fc;
+    let heartbeat=null;
+    ws.onopen=()=>{
+      ws.send(JSON.stringify({topic,event:'phx_join',payload:{config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'*',schema:'public',table:'items',filter:'family_code=eq.'+fc}]}},ref:'1'}));
+      heartbeat=setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:'hb'})),25000);
+    };
+    ws.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.event==='postgres_changes'||['INSERT','UPDATE','DELETE'].includes(d.event))onChange(d);}catch(err){}};
+    ws.onclose=()=>{if(heartbeat)clearInterval(heartbeat);realtimeCh=null;};
+    ws.onerror=()=>{try{ws.close();}catch(e){}};
     return ws;
   }
 };
@@ -627,40 +642,53 @@ async function syncSmart(){
   if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode){setSyncStatus('offline');return;}
   try{
     setSyncStatus('syncing');
+    await SB.healthCheck(); // fallisce subito se tabella/RLS/API key non sono corretti
     const rows=await SB.fetchAll(cfg.familyCode);
-    if(!Array.isArray(rows)){setSyncStatus('error');return;}
+    if(!Array.isArray(rows))throw new Error('Risposta Supabase non valida');
+
+    const pushOrFail=async(row)=>{
+      const saved=await SB.upsert(row);
+      if(!saved||!saved.length)throw new Error('Upsert senza conferma per '+row.name);
+      return saved[0];
+    };
 
     if(rows.length===0){
-      // Remoto vuoto: pusha tutto il locale, non cancellare nulla
+      // Remoto vuoto: pusha tutto il locale, ma NON dichiarare online se un push fallisce.
       const allRows=buildAllRows();
-      for(const row of allRows){try{await SB.upsert(row);}catch(e){console.warn('push err',e);}}
-      setSyncStatus('online');supaReady=true;setupRealtime();
+      for(const row of allRows)await pushOrFail(row);
+      const fresh=await SB.fetchAll(cfg.familyCode);
+      state.products=[];state.shoppingList=[];state.cart=[];
+      fresh.forEach(r=>applyRow(r));
+      saveLocal();renderMain();updateBadges();updateExpiryAlert();
       if(allRows.length>0)toast('☁️ '+allRows.length+' elementi caricati su Supabase');
     }else{
       // Remoto ha dati: merge sicuro
       const remoteIds=new Set(rows.map(r=>r.id));
-      // Salva elementi locali non ancora sul remoto
       const localOnlyP=state.products.filter(p=>!remoteIds.has(p.id));
       const localOnlyS=state.shoppingList.filter(s=>!remoteIds.has(s.id));
       const localOnlyC=state.cart.filter(c=>!remoteIds.has(c.id));
-      // Ricostruisci da remoto
+
       state.products=[];state.shoppingList=[];state.cart=[];
       rows.forEach(r=>applyRow(r));
-      // Reintegra locali non sul remoto
       state.products.push(...localOnlyP);
       state.shoppingList.push(...localOnlyS);
       state.cart.push(...localOnlyC);
-      // Pusha quelli mancanti
-      for(const p of localOnlyP)try{await SB.upsert(itemToRow('product',p));}catch(e){}
-      for(const s of localOnlyS)try{await SB.upsert(itemToRow('shopping',s));}catch(e){}
-      for(const c of localOnlyC)try{await SB.upsert(itemToRow('cart',c));}catch(e){}
+
+      for(const p of localOnlyP)await pushOrFail(itemToRow('product',p));
+      for(const s of localOnlyS)await pushOrFail(itemToRow('shopping',s));
+      for(const c of localOnlyC)await pushOrFail(itemToRow('cart',c));
+
       saveLocal();renderMain();updateBadges();updateExpiryAlert();
-      setSyncStatus('online');supaReady=true;setupRealtime();
     }
-    // Flush pending queue
-    for(const item of syncQueue){try{await SB.upsert(item);}catch(e){}}
+
+    for(const item of syncQueue)await pushOrFail(item);
     syncQueue=[];
-  }catch(e){setSyncStatus('error');console.warn('Sync error',e);}
+    setSyncStatus('online');supaReady=true;setupRealtime();
+  }catch(e){
+    setSyncStatus('error');
+    console.warn('Sync error',e);
+    toast('⚠️ Sync Supabase fallita: '+String(e.message||e).slice(0,120),5000);
+  }
 }
 
 function itemToRow(listType,item){
@@ -685,14 +713,23 @@ async function pushItem(listType,item){
   saveLocal();
   if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode){setSyncStatus('offline');return;}
   const row=itemToRow(listType,item);
-  try{await SB.upsert(row);setSyncStatus('online');}
-  catch(e){
+  try{
+    const saved=await SB.upsert(row);
+    if(!saved||!saved.length)throw new Error('Supabase non ha confermato il salvataggio');
+    setSyncStatus('online');
+  }catch(e){
     syncQueue.push(row);
     setSyncStatus('error');
-    // Non mostrare errore invasivo — riprova al prossimo sync
+    console.warn('Push error',e,row);
+    toast('⚠️ Errore sincronizzazione: '+String(e.message||e).slice(0,120),4500);
   }
 }
-async function deleteItem(id){saveLocal();if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode)return;try{await SB.delete(id);setSyncStatus('online');}catch(e){setSyncStatus('error');}}
+async function deleteItem(id){
+  saveLocal();
+  if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode)return;
+  try{await SB.delete(id);setSyncStatus('online');}
+  catch(e){setSyncStatus('error');console.warn('Delete error',e);toast('⚠️ Eliminazione non sincronizzata: '+String(e.message||e).slice(0,100),4000);}
+}
 
 // ═══════════════════════════════════════════
 //  SETUP
