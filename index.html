@@ -150,7 +150,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--surface)
 .qty-btn{width:33px;height:33px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .qty-val{font-size:15px;font-weight:700;min-width:34px;text-align:center}
 /* CAMERA */
-#camera-container{position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:4/3}
+#camera-container{position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:3/4;max-height:65dvh}
 #camera-video{width:100%;height:100%;object-fit:cover;display:block}
 #camera-canvas{display:none}#preprocess-canvas{display:none}
 #photo-preview{width:100%;height:100%;object-fit:cover;display:none}
@@ -392,10 +392,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--surface)
     <div class="modal-title">📷 Scansiona Scontrino</div>
     <div class="mode-pills">
       <div class="mode-pill active" data-mode="tesseract" onclick="setOcrMode('tesseract')">🔒 Offline</div>
-      <div class="mode-pill" data-mode="claude" onclick="setOcrMode('claude')">☁️ Claude AI</div>
+      <div class="mode-pill" data-mode="claude" onclick="setOcrMode('claude')">☁️ GPT-4o Vision</div>
     </div>
     <div id="tesseract-info" class="info-card" style="font-size:11px">🔒 <strong>Offline</strong> — Tesseract.js, zero server. Prima volta ~10MB.</div>
-    <div id="claude-info" class="info-card" style="display:none;font-size:11px">☁️ <strong>Claude Vision</strong> — categorizzazione AI precisa. Richiede API Key + connessione.</div>
+    <div id="claude-info" class="info-card" style="display:none;font-size:11px">🤖 <strong>GPT-4o Vision</strong> — categorizzazione AI precisa. Inserisci la tua <strong>OpenAI API Key</strong> (sk-...). Ottienila su <strong>platform.openai.com</strong>.</div>
     <div id="camera-container">
       <video id="camera-video" autoplay playsinline muted></video>
       <canvas id="camera-canvas"></canvas><canvas id="preprocess-canvas"></canvas>
@@ -433,7 +433,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--surface)
     </div>
     <div id="api-key-prompt" style="display:none">
       <div class="info-card"><strong>🔑 API Key Anthropic</strong><br>Necessaria per Claude Vision. Oppure usa Offline.</div>
-      <input class="input-field" id="api-key-input" type="password" placeholder="sk-ant-api03-..." style="margin-bottom:10px">
+      <input class="input-field" id="api-key-input" type="password" placeholder="sk-..." style="margin-bottom:10px">
       <div class="btn-row">
         <button class="btn btn-ghost" onclick="setOcrMode('tesseract');document.getElementById('api-key-prompt').style.display='none';startCamera()">Usa Offline</button>
         <button class="btn btn-primary" onclick="saveApiKeyAndContinue()">Salva</button>
@@ -452,7 +452,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--surface)
     <div class="modal-title">⚙️ Impostazioni</div>
     <div class="info-card">
       <strong>☁️ Claude API Key (opzionale)</strong><br>Solo per modalità Cloud OCR.
-      <input class="input-field" id="settings-api-key" type="password" placeholder="sk-ant-api03-..." style="margin-top:10px">
+      <input class="input-field" id="settings-api-key" type="password" placeholder="sk-..." style="margin-top:10px">
     </div>
     <div class="btn-row">
       <button class="btn btn-ghost" onclick="closeModal('modal-settings')">Chiudi</button>
@@ -516,7 +516,12 @@ function fmt(d){const dt=new Date(d),now=new Date(),diff=now-dt;
   if(diff<604800000)return Math.floor(diff/86400000)+'gg fa';
   return dt.toLocaleDateString('it-IT',{day:'2-digit',month:'short'});}
 function fmtDate(s){if(!s)return'';const d=new Date(s+'T12:00:00');return d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'2-digit'});}
-function daysToExpiry(s){if(!s)return null;const d=new Date(s+'T23:59:59'),now=new Date();return Math.ceil((d-now)/86400000);}
+function daysToExpiry(s){
+  if(!s)return null;
+  const expDate=new Date(s+'T00:00:00');
+  const today=new Date();today.setHours(0,0,0,0);expDate.setHours(0,0,0,0);
+  return Math.round((expDate-today)/86400000);
+}
 function expiryClass(s){const d=daysToExpiry(s);if(d===null)return'';if(d<0)return'expired';if(d<=3)return'soon';return'ok';}
 function expiryLabel(s){const d=daysToExpiry(s);if(d===null)return'';if(d<0)return'Scaduto';if(d===0)return'Scade oggi';if(d===1)return'Scade domani';if(d<=3)return'Scade in '+d+'gg';return fmtDate(s);}
 function catLabel(c){return{dispensa:'🧺 Dispensa',frigo:'❄️ Frigo',altro:'📦 Altro'}[c]||c;}
@@ -585,9 +590,10 @@ async function applyExpiry(id,type,expiry){
 const SB={
   async req(method,path,body=null){
     if(!cfg.sbUrl||!cfg.sbKey)throw new Error('Supabase non configurato');
+    const baseUrl=cfg.sbUrl.replace(/\/+$/,'');
     const opts={method,headers:{'Content-Type':'application/json','apikey':cfg.sbKey,'Authorization':'Bearer '+cfg.sbKey,'Prefer':'return=minimal'}};
     if(body)opts.body=JSON.stringify(body);
-    const r=await fetch(cfg.sbUrl+'/rest/v1/'+path,opts);
+    const r=await fetch(baseUrl+'/rest/v1/'+path,opts);
     if(!r.ok){const t=await r.text();throw new Error(t);}
     const txt=await r.text();return txt?JSON.parse(txt):null;
   },
@@ -620,9 +626,19 @@ async function fullSync(){
   try{
     setSyncStatus('syncing');
     const rows=await SB.fetchAll(cfg.familyCode);
-    if(!rows){setSyncStatus('error');return;}
+    if(!rows||!Array.isArray(rows)){setSyncStatus('error');return;}
+    // Rebuild solo se la fetch ha successo
+    const prevProducts=[...state.products],prevShopping=[...state.shoppingList],prevCart=[...state.cart];
     state.products=[];state.shoppingList=[];state.cart=[];
     rows.forEach(r=>applyRow(r));
+    // Se il server è vuoto ma avevamo dati locali, ripusha i locali invece di cancellarli
+    if(rows.length===0&&(prevProducts.length>0||prevShopping.length>0||prevCart.length>0)){
+      state.products=prevProducts;state.shoppingList=prevShopping;state.cart=prevCart;
+      // Push tutti i dati locali verso Supabase
+      for(const p of state.products)syncQueue.push({id:p.id,family_code:cfg.familyCode,list_type:'product',name:p.name,category:p.category||'dispensa',qty:p.qty||1,unit:p.unit||'',notes:p.notes||'',checked:p.checked||false,confirmed:p.confirmed||false,origin_category:p.originCategory||p.category||'dispensa',added_at:p.addedAt||Date.now(),checked_at:p.checkedAt||null,updated_at:Date.now(),expiry:p.expiry||null});
+      for(const s of state.shoppingList)syncQueue.push({id:s.id,family_code:cfg.familyCode,list_type:'shopping',name:s.name,category:s.category||'dispensa',qty:s.qty||1,unit:s.unit||'',notes:s.source||'',checked:s.checked||false,confirmed:s.confirmed||false,origin_category:s.originCategory||'dispensa',added_at:s.addedAt||Date.now(),checked_at:null,updated_at:Date.now(),expiry:s.expiry||null});
+      for(const c of state.cart)syncQueue.push({id:c.id,family_code:cfg.familyCode,list_type:'cart',name:c.name,category:c.category||'dispensa',qty:c.qty||1,unit:c.unit||'',notes:c.notes||'',checked:c.checked||false,confirmed:c.confirmed||false,origin_category:c.originCategory||c.category||'dispensa',added_at:c.addedAt||Date.now(),checked_at:null,updated_at:Date.now(),expiry:c.expiry||null});
+    }
     saveLocal();renderMain();updateBadges();updateExpiryAlert();
     for(const item of syncQueue){try{await SB.upsert(item);}catch(e){}}
     syncQueue=[];setSyncStatus('online');supaReady=true;setupRealtime();
@@ -642,7 +658,14 @@ async function deleteItem(id){saveLocal();if(!cfg.sbUrl||!cfg.sbKey||!cfg.family
 // ═══════════════════════════════════════════
 function showSetupError(msg){const el=document.getElementById('setup-error');el.textContent=msg;el.style.display='block';}
 function joinFamily(){const code=document.getElementById('join-code').value.trim().toUpperCase();if(code.length<4){showSetupError('Inserisci un codice valido');return;}cfg.familyCode=code;saveLocal();if(!cfg.sbUrl||!cfg.sbKey){openModal('modal-supabase');}else{startApp();}}
-function createFamily(){cfg.familyCode=genFamilyCode();saveLocal();if(!cfg.sbUrl||!cfg.sbKey){openModal('modal-supabase');}else{startApp();}}
+function createFamily(){
+  cfg.familyCode=genFamilyCode();saveLocal();
+  // Mostra il codice generato e avvia subito l'app (Supabase opzionale)
+  document.getElementById('setup-screen').classList.add('hidden');
+  // Mostra modal famiglia con codice + pulsante condivisione, poi parte
+  startApp();
+  toast('Codice famiglia: '+cfg.familyCode+' — condividilo dal menu 👨‍👩‍👧',5000);
+}
 function useOffline(){cfg.familyCode=cfg.familyCode||'LOCAL-'+uid().slice(0,4);saveLocal();startApp();}
 function changeFamily(){closeModal('modal-settings');cfg.familyCode='';saveLocal();showSetupScreen();}
 function showSetupScreen(){document.getElementById('setup-screen').classList.remove('hidden');document.getElementById('app').style.display='none';document.getElementById('join-code').value=cfg.familyCode||'';}
@@ -1027,6 +1050,21 @@ function showCtx(e,id){e.preventDefault?.();const p=state.products.find(x=>x.id=
 function closeCtx(){document.getElementById('ctx-menu').style.display='none';document.getElementById('ctx-overlay').style.display='none';}
 
 // ═══════════════════════════════════════════
+//  CARRELLO AGGIUNTA MANUALE
+// ═══════════════════════════════════════════
+function addToCarrelloChoice(){
+  // Mostra scelta: manuale o fotocamera
+  const name=prompt('Aggiungi al carrello (nome prodotto):');
+  if(!name?.trim())return;
+  addToCarrelloManual(name.trim());
+}
+async function addToCarrelloManual(name){
+  const item={id:uid(),name,category:'dispensa',qty:1,unit:'pz',expiry:null,confirmed:false,originCategory:'dispensa',addedAt:Date.now()};
+  state.cart.push(item);await pushItem('cart',item);
+  renderMain();updateBadges();toast(`🛒 "${name}" aggiunto al carrello`);
+}
+
+// ═══════════════════════════════════════════
 //  OCR / CAMERA
 // ═══════════════════════════════════════════
 let stream=null,capturedImageData=null,scannedProducts=[],rawOcrText='';
@@ -1064,8 +1102,29 @@ async function runTesseractOcr(canvas){setOcrProg(10,'Caricamento OCR...');await
 function parseReceiptText(text){const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>2);const skip=[/^(totale|subtotale|sconto|iva|pagato|resto|cassa|scontrino|data|ora|p\.iva|partita|fiscale|codice|tel|fax|euro|eur|www|\.it|grazie|arrivederci|punti|carta)/i,/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/,/^\d{2}:\d{2}/,/^[*\-=_#\s]+$/,/^\d+[\.,]\d{2}\s*[A-Z]?$/,/^.{1,2}$/];const products=[];for(const line of lines){if(skip.some(p=>p.test(line)))continue;if(!/[a-zA-ZàèéìòùÀÈÉÌÒÙ]{3}/.test(line))continue;let name=line.replace(/\s+\d+[,\.]\d{2}\s*[A-Z]?\s*$/,'').replace(/^\d+\s+x?\s*/i,'').replace(/[*]/g,'').trim();if(name.length<3)continue;const category=guessCategory(name);const qm=line.match(/^(\d+)\s+/);const qty=qm?parseInt(qm[1]):1;if(!products.find(p=>p.name.toLowerCase()===name.toLowerCase()))products.push({name:capFirst(name),category,qty,unit:'pz',selected:true,tempId:uid()});}return products;}
 function guessCategory(name){const n=name.toLowerCase();const frigo=['latte','yogurt','formaggio','burro','uov','prosciutto','salame','bresaola','mortadella','mozzarella','panna','ricotta','tofu','pollo','carne','pesce','salmone','tonno fresco','verdur','insalata','lattuga','spinaci','carota','zucchina','melanzana','fragol'];const disp=['pasta','riso','farin','zucchero','olio','aceto','sale','pepe','caffe','the','biscotti','crackers','grissini','pane','fette','cereali','marmellata','miele','nutella','cioccolato','cacao','pomodoro','passata','pelati','fagioli','lenticchie','ceci','mais','tonno','sardine','pesto','sugo','brodo','dado','senape','ketchup','maionese','chips','snack','nocciole','acqua','succo','bibita','coca'];if(frigo.some(k=>n.includes(k)))return'frigo';if(disp.some(k=>n.includes(k)))return'dispensa';return'dispensa';}
 function capFirst(s){return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();}
-async function runClaudeOcr(b64){setOcrProg(20,'Claude AI...');const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':cfg.apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:2000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:'Estrai prodotti alimentari dallo scontrino. SOLO JSON array: [{"name":"nome","category":"frigo|dispensa|altro","qty":1,"unit":"pz"}]. Zero testo extra.'}]}]})});setOcrProg(80,'Elaborazione...');if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${resp.status}`);}const data=await resp.json();const text=(data.content||[]).map(c=>c.text||'').join('');rawOcrText=text;try{return JSON.parse(text.replace(/```json|```/g,'').trim()).map(p=>({...p,selected:true,tempId:uid()}));}catch{throw new Error('Risposta non valida');}}
-function showScannedResults(){document.getElementById('ocr-loading').style.display='none';document.getElementById('ocr-count').textContent=`${cfg.ocrMode==='tesseract'?'🔒 Offline':'☁️ Claude'} — ${scannedProducts.length} prodotti:`;const listEl=document.getElementById('scanned-items-list');if(!scannedProducts.length){listEl.innerHTML=`<div style="color:var(--text2);text-align:center;padding:14px">Nessun prodotto. Riprova con foto più nitida.</div>`;}else{listEl.innerHTML=scannedProducts.map((p,i)=>`<div class="scanned-item"><input type="checkbox" ${p.selected?'checked':''} onchange="scannedProducts[${i}].selected=this.checked"><span class="scanned-item-name">${esc(p.name)}${p.qty>1?' ×'+p.qty:''}</span><select onchange="scannedProducts[${i}].category=this.value"><option value="dispensa" ${p.category==='dispensa'?'selected':''}>🧺</option><option value="frigo" ${p.category==='frigo'?'selected':''}>❄️</option><option value="altro" ${p.category==='altro'?'selected':''}>📦</option></select></div>`).join('');}document.getElementById('raw-box').textContent=rawOcrText||'(nessun testo)';document.getElementById('ocr-results').style.display='block';}
+async function runClaudeOcr(b64){
+  setOcrProg(20,'Invio a GPT-4o...');
+  const resp=await fetch('https://api.openai.com/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
+    body:JSON.stringify({
+      model:'gpt-4o',
+      max_tokens:2000,
+      messages:[{role:'user',content:[
+        {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64,detail:'high'}},
+        {type:'text',text:'Analizza questo scontrino italiano. Estrai SOLO i prodotti alimentari acquistati. Rispondi ESCLUSIVAMENTE con un JSON array, zero testo aggiuntivo, zero markdown. Formato: [{"name":"nome prodotto","category":"frigo","qty":1,"unit":"pz"}]. Categorie: frigo=latticini/carne/pesce/verdura fresca/salumi/uova, dispensa=pasta/riso/scatolame/olio/bevande/snack/dolci, altro=detersivi/igiene/varie.'}
+      ]}]
+    })
+  });
+  setOcrProg(80,'Elaborazione...');
+  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
+  const data=await resp.json();
+  const text=data.choices?.[0]?.message?.content||'';
+  rawOcrText=text;
+  try{return JSON.parse(text.replace(/```json|```/g,'').trim()).map(p=>({...p,selected:true,tempId:uid()}));}
+  catch{throw new Error('Risposta non valida da GPT-4o');}
+}
+function showScannedResults(){document.getElementById('ocr-loading').style.display='none';document.getElementById('ocr-count').textContent=`${cfg.ocrMode==='tesseract'?'🔒 Offline':'☁️ GPT-4o'} — ${scannedProducts.length} prodotti:`;const listEl=document.getElementById('scanned-items-list');if(!scannedProducts.length){listEl.innerHTML=`<div style="color:var(--text2);text-align:center;padding:14px">Nessun prodotto. Riprova con foto più nitida.</div>`;}else{listEl.innerHTML=scannedProducts.map((p,i)=>`<div class="scanned-item"><input type="checkbox" ${p.selected?'checked':''} onchange="scannedProducts[${i}].selected=this.checked"><span class="scanned-item-name">${esc(p.name)}${p.qty>1?' ×'+p.qty:''}</span><select onchange="scannedProducts[${i}].category=this.value"><option value="dispensa" ${p.category==='dispensa'?'selected':''}>🧺</option><option value="frigo" ${p.category==='frigo'?'selected':''}>❄️</option><option value="altro" ${p.category==='altro'?'selected':''}>📦</option></select></div>`).join('');}document.getElementById('raw-box').textContent=rawOcrText||'(nessun testo)';document.getElementById('ocr-results').style.display='block';}
 function toggleRaw(){const b=document.getElementById('raw-box');b.style.display=b.style.display==='none'?'block':'none';}
 async function addScannedProducts(){const toAdd=scannedProducts.filter(p=>p.selected);if(!toAdd.length){toast('⚠️ Seleziona almeno un prodotto');return;}for(const p of toAdd){const item={id:uid(),name:p.name,category:p.category,qty:p.qty||1,unit:p.unit||'pz',expiry:null,confirmed:false,originCategory:p.category,addedAt:Date.now()};state.cart.push(item);await pushItem('cart',item);}closeCamera();switchTop('carrello');updateBadges();toast(`🛒 ${toAdd.length} prodotti nel carrello`);}
 function retakePicture(){document.getElementById('ocr-results').style.display='none';document.getElementById('photo-preview').style.display='none';scannedProducts=[];rawOcrText='';openCamera();}
@@ -1102,7 +1161,7 @@ function init(){
   document.getElementById('btn-scan').addEventListener('click',openCamera);
   document.getElementById('btn-settings').addEventListener('click',openSettings);
   document.getElementById('btn-family').addEventListener('click',()=>{document.getElementById('family-code-display').textContent=cfg.familyCode||'—';openModal('modal-family');});
-  document.getElementById('fab').addEventListener('click',()=>{if(topTab==='spesa')addToSpesaManual();else if(topTab==='carrello')openCamera();else openAdd();});
+  document.getElementById('fab').addEventListener('click',()=>{if(topTab==='spesa')addToSpesaManual();else if(topTab==='carrello')addToCarrelloChoice();else openAdd();});
   setTimeout(()=>{
     document.getElementById('splash').classList.add('hide');
     setTimeout(()=>{
