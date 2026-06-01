@@ -621,35 +621,76 @@ function applyRow(r){
   else if(r.list_type==='shopping')state.shoppingList.push({...base,source:r.notes||'',pending:!r.confirmed});
   else if(r.list_type==='cart')state.cart.push(base);
 }
-async function fullSync(){
+async function fullSync(){return syncSmart();}
+
+async function syncSmart(){
   if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode){setSyncStatus('offline');return;}
   try{
     setSyncStatus('syncing');
     const rows=await SB.fetchAll(cfg.familyCode);
-    if(!rows||!Array.isArray(rows)){setSyncStatus('error');return;}
-    // Rebuild solo se la fetch ha successo
-    const prevProducts=[...state.products],prevShopping=[...state.shoppingList],prevCart=[...state.cart];
-    state.products=[];state.shoppingList=[];state.cart=[];
-    rows.forEach(r=>applyRow(r));
-    // Se il server è vuoto ma avevamo dati locali, ripusha i locali invece di cancellarli
-    if(rows.length===0&&(prevProducts.length>0||prevShopping.length>0||prevCart.length>0)){
-      state.products=prevProducts;state.shoppingList=prevShopping;state.cart=prevCart;
-      // Push tutti i dati locali verso Supabase
-      for(const p of state.products)syncQueue.push({id:p.id,family_code:cfg.familyCode,list_type:'product',name:p.name,category:p.category||'dispensa',qty:p.qty||1,unit:p.unit||'',notes:p.notes||'',checked:p.checked||false,confirmed:p.confirmed||false,origin_category:p.originCategory||p.category||'dispensa',added_at:p.addedAt||Date.now(),checked_at:p.checkedAt||null,updated_at:Date.now(),expiry:p.expiry||null});
-      for(const s of state.shoppingList)syncQueue.push({id:s.id,family_code:cfg.familyCode,list_type:'shopping',name:s.name,category:s.category||'dispensa',qty:s.qty||1,unit:s.unit||'',notes:s.source||'',checked:s.checked||false,confirmed:s.confirmed||false,origin_category:s.originCategory||'dispensa',added_at:s.addedAt||Date.now(),checked_at:null,updated_at:Date.now(),expiry:s.expiry||null});
-      for(const c of state.cart)syncQueue.push({id:c.id,family_code:cfg.familyCode,list_type:'cart',name:c.name,category:c.category||'dispensa',qty:c.qty||1,unit:c.unit||'',notes:c.notes||'',checked:c.checked||false,confirmed:c.confirmed||false,origin_category:c.originCategory||c.category||'dispensa',added_at:c.addedAt||Date.now(),checked_at:null,updated_at:Date.now(),expiry:c.expiry||null});
+    if(!Array.isArray(rows)){setSyncStatus('error');return;}
+
+    if(rows.length===0){
+      // Remoto vuoto: pusha tutto il locale, non cancellare nulla
+      const allRows=buildAllRows();
+      for(const row of allRows){try{await SB.upsert(row);}catch(e){console.warn('push err',e);}}
+      setSyncStatus('online');supaReady=true;setupRealtime();
+      if(allRows.length>0)toast('☁️ '+allRows.length+' elementi caricati su Supabase');
+    }else{
+      // Remoto ha dati: merge sicuro
+      const remoteIds=new Set(rows.map(r=>r.id));
+      // Salva elementi locali non ancora sul remoto
+      const localOnlyP=state.products.filter(p=>!remoteIds.has(p.id));
+      const localOnlyS=state.shoppingList.filter(s=>!remoteIds.has(s.id));
+      const localOnlyC=state.cart.filter(c=>!remoteIds.has(c.id));
+      // Ricostruisci da remoto
+      state.products=[];state.shoppingList=[];state.cart=[];
+      rows.forEach(r=>applyRow(r));
+      // Reintegra locali non sul remoto
+      state.products.push(...localOnlyP);
+      state.shoppingList.push(...localOnlyS);
+      state.cart.push(...localOnlyC);
+      // Pusha quelli mancanti
+      for(const p of localOnlyP)try{await SB.upsert(itemToRow('product',p));}catch(e){}
+      for(const s of localOnlyS)try{await SB.upsert(itemToRow('shopping',s));}catch(e){}
+      for(const c of localOnlyC)try{await SB.upsert(itemToRow('cart',c));}catch(e){}
+      saveLocal();renderMain();updateBadges();updateExpiryAlert();
+      setSyncStatus('online');supaReady=true;setupRealtime();
     }
-    saveLocal();renderMain();updateBadges();updateExpiryAlert();
+    // Flush pending queue
     for(const item of syncQueue){try{await SB.upsert(item);}catch(e){}}
-    syncQueue=[];setSyncStatus('online');supaReady=true;setupRealtime();
+    syncQueue=[];
   }catch(e){setSyncStatus('error');console.warn('Sync error',e);}
+}
+
+function itemToRow(listType,item){
+  return{id:item.id,family_code:cfg.familyCode,list_type:listType,
+    name:item.name,category:item.category||'dispensa',qty:item.qty||1,
+    unit:item.unit||'',notes:item.notes||item.source||'',
+    checked:item.checked||false,confirmed:item.confirmed||false,
+    origin_category:item.originCategory||item.category||'dispensa',
+    added_at:item.addedAt||Date.now(),checked_at:item.checkedAt||null,
+    updated_at:Date.now(),expiry:item.expiry||null};
+}
+
+function buildAllRows(){
+  return[
+    ...state.products.map(p=>itemToRow('product',p)),
+    ...state.shoppingList.map(s=>itemToRow('shopping',s)),
+    ...state.cart.map(c=>itemToRow('cart',c))
+  ];
 }
 function setupRealtime(){if(realtimeCh)return;realtimeCh=SB.subscribe(cfg.familyCode,()=>{setSyncStatus('syncing');fullSync().then(()=>setSyncStatus('online'));});}
 async function pushItem(listType,item){
-  const row={id:item.id,family_code:cfg.familyCode,list_type:listType,name:item.name,category:item.category||'dispensa',qty:item.qty||1,unit:item.unit||'',notes:item.notes||item.source||'',checked:item.checked||false,confirmed:item.confirmed||false,origin_category:item.originCategory||item.category||'dispensa',added_at:item.addedAt||Date.now(),checked_at:item.checkedAt||null,updated_at:Date.now(),expiry:item.expiry||null};
   saveLocal();
-  if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode)return;
-  try{await SB.upsert(row);setSyncStatus('online');}catch(e){syncQueue.push(row);setSyncStatus('error');}
+  if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode){setSyncStatus('offline');return;}
+  const row=itemToRow(listType,item);
+  try{await SB.upsert(row);setSyncStatus('online');}
+  catch(e){
+    syncQueue.push(row);
+    setSyncStatus('error');
+    // Non mostrare errore invasivo — riprova al prossimo sync
+  }
 }
 async function deleteItem(id){saveLocal();if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode)return;try{await SB.delete(id);setSyncStatus('online');}catch(e){setSyncStatus('error');}}
 
@@ -670,11 +711,15 @@ function useOffline(){cfg.familyCode=cfg.familyCode||'LOCAL-'+uid().slice(0,4);s
 function changeFamily(){closeModal('modal-settings');cfg.familyCode='';saveLocal();showSetupScreen();}
 function showSetupScreen(){document.getElementById('setup-screen').classList.remove('hidden');document.getElementById('app').style.display='none';document.getElementById('join-code').value=cfg.familyCode||'';}
 function saveSupabaseConfig(){
-  const url=document.getElementById('sb-url').value.trim().replace(/\/$/,'');
+  const url=document.getElementById('sb-url').value.trim().replace(/\/+$/,'');
   const key=document.getElementById('sb-key').value.trim();
   if(!url.startsWith('https://')||!key){toast('⚠️ URL o Key non validi');return;}
-  cfg.sbUrl=url;cfg.sbKey=key;saveLocal();closeModal('modal-supabase');
-  if(!cfg.familyCode)showSetupScreen();else{startApp();}
+  cfg.sbUrl=url;cfg.sbKey=key;saveLocal();
+  closeModal('modal-supabase');
+  if(!cfg.familyCode){showSetupScreen();return;}
+  // Non chiamare startApp/fullSync — solo tenta sync smart
+  toast('☁️ Connessione a Supabase...');
+  syncSmart();
 }
 function startApp(){
   document.getElementById('setup-screen').classList.add('hidden');
