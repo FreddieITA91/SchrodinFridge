@@ -393,11 +393,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--surface)
     <div class="modal-handle"></div>
     <div class="modal-title">📷 Scansiona Scontrino</div>
     <div class="mode-pills">
-      <div class="mode-pill active" data-mode="tesseract" onclick="setOcrMode('tesseract')">🔒 Offline</div>
-      <div class="mode-pill" data-mode="claude" onclick="setOcrMode('claude')">☁️ GPT-4o Vision</div>
+      <div class="mode-pill active" data-mode="vision" onclick="setOcrMode('vision')">☁️ Visione AI</div>
+      <div class="mode-pill" data-mode="tesseract" onclick="setOcrMode('tesseract')">🔒 Offline</div>
     </div>
-    <div id="tesseract-info" class="info-card" style="font-size:11px">🔒 <strong>Offline</strong> — Tesseract.js, zero server. Prima volta ~10MB.</div>
-    <div id="claude-info" class="info-card" style="display:none;font-size:11px">🤖 <strong>GPT-4o Vision</strong> — categorizzazione AI precisa. Inserisci la tua <strong>OpenAI API Key</strong> (sk-...). Ottienila su <strong>platform.openai.com</strong>.</div>
+    <div id="vision-info" class="info-card" style="font-size:11px">☁️ <strong>Visione AI consigliata</strong> — usa una Supabase Edge Function: legge solo le voci acquistate e scarta prezzi, totali, date e testo esterno.</div>
+    <div id="tesseract-info" class="info-card" style="display:none;font-size:11px">🔒 <strong>Offline</strong> — fallback locale con Tesseract.js. Meno affidabile su foto storte o scontrini poco nitidi.</div>
     <div id="camera-container">
       <video id="camera-video" autoplay playsinline muted></video>
       <canvas id="camera-canvas"></canvas><canvas id="preprocess-canvas"></canvas>
@@ -434,11 +434,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--surface)
       </div>
     </div>
     <div id="api-key-prompt" style="display:none">
-      <div class="info-card"><strong>🔑 API Key Anthropic</strong><br>Necessaria per Claude Vision. Oppure usa Offline.</div>
-      <input class="input-field" id="api-key-input" type="password" placeholder="sk-..." style="margin-bottom:10px">
+      <div class="info-card"><strong>☁️ Visione AI non configurata</strong><br>Configura Supabase e pubblica la funzione <code>receipt-vision</code>. Nel pacchetto trovi istruzioni e codice pronto.</div>
       <div class="btn-row">
         <button class="btn btn-ghost" onclick="setOcrMode('tesseract');document.getElementById('api-key-prompt').style.display='none';startCamera()">Usa Offline</button>
-        <button class="btn btn-primary" onclick="saveApiKeyAndContinue()">Salva</button>
+        <button class="btn btn-primary" onclick="openModal('modal-supabase')">Configura Supabase</button>
       </div>
     </div>
     <div class="btn-row" style="margin-top:10px">
@@ -453,8 +452,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--surface)
     <div class="modal-handle"></div>
     <div class="modal-title">⚙️ Impostazioni</div>
     <div class="info-card">
-      <strong>☁️ Claude API Key (opzionale)</strong><br>Solo per modalità Cloud OCR.
-      <input class="input-field" id="settings-api-key" type="password" placeholder="sk-..." style="margin-top:10px">
+      <strong>☁️ OCR scontrini</strong><br>La modalità consigliata usa Supabase Edge Function <code>receipt-vision</code>, così la chiave OpenAI resta sul server e non nel browser.
     </div>
     <div class="btn-row">
       <button class="btn btn-ghost" onclick="closeModal('modal-settings')">Chiudi</button>
@@ -499,7 +497,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--surface)
 //  STATE
 // ═══════════════════════════════════════════
 const DB_KEY='schrodingerFridge_v5';
-let cfg={sbUrl:'',sbKey:'',familyCode:'',apiKey:'',ocrMode:'tesseract'};
+let cfg={sbUrl:'',sbKey:'',familyCode:'',apiKey:'',ocrMode:'vision'};
 let state={products:[],shoppingList:[],cart:[]};
 let topTab='ricerca',botTab='dispensa';
 let supaReady=false,realtimeCh=null,syncQueue=[];
@@ -1152,16 +1150,16 @@ async function addToCarrelloManual(name){
 //  OCR / CAMERA
 // ═══════════════════════════════════════════
 let stream=null,capturedImageData=null,scannedProducts=[],rawOcrText='';
-function setOcrMode(mode){cfg.ocrMode=mode;saveLocal();document.querySelectorAll('.mode-pill').forEach(p=>p.classList.toggle('active',p.dataset.mode===mode));document.getElementById('tesseract-info').style.display=mode==='tesseract'?'block':'none';document.getElementById('claude-info').style.display=mode==='claude'?'block':'none';}
+function setOcrMode(mode){cfg.ocrMode=mode;saveLocal();document.querySelectorAll('.mode-pill').forEach(p=>p.classList.toggle('active',p.dataset.mode===mode));document.getElementById('vision-info').style.display=mode==='vision'?'block':'none';document.getElementById('tesseract-info').style.display=mode==='tesseract'?'block':'none';}
 function setOcrProg(pct,msg){document.getElementById('ocr-pb').style.width=pct+'%';document.getElementById('ocr-loading-text').textContent=msg;}
 async function openCamera(){
-  setOcrMode(cfg.ocrMode||'tesseract');
+  setOcrMode(cfg.ocrMode||'vision');
   ['camera-controls','camera-container'].forEach(id=>document.getElementById(id).style.display='block');
   ['ocr-loading','ocr-results','api-key-prompt'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('camera-overlay').style.display='flex';
   document.getElementById('photo-preview').style.display='none';
   document.getElementById('camera-video').style.display='block';
-  if(cfg.ocrMode==='claude'&&!cfg.apiKey){document.getElementById('api-key-prompt').style.display='block';document.getElementById('camera-controls').style.display='none';document.getElementById('camera-container').style.display='none';openModal('modal-camera');return;}
+  if(cfg.ocrMode==='vision'&&(!cfg.sbUrl||!cfg.sbKey)){document.getElementById('api-key-prompt').style.display='block';document.getElementById('camera-controls').style.display='none';document.getElementById('camera-container').style.display='none';openModal('modal-camera');return;}
   openModal('modal-camera');await startCamera();
 }
 async function startCamera(){stopStream();
@@ -1196,7 +1194,7 @@ async function capturePhoto(){
   document.getElementById('ocr-loading').style.display='block';
   setOcrProg(5,'Avvio OCR...');
   try{
-    const products=cfg.ocrMode==='tesseract'?await runTesseractOcr(canvas):await runClaudeOcr(capturedImageData);
+    const products=cfg.ocrMode==='vision'?await runVisionOcr(capturedImageData):await runTesseractOcr(canvas);
     scannedProducts=products;
     setOcrProg(100,'Completato!');
     setTimeout(showScannedResults,300);
@@ -1325,40 +1323,61 @@ function parseReceiptText(text){
   return mergeScannedProducts(products);
 }
 function capFirst(s){return titleCaseName(s);}
-async function runClaudeOcr(b64){
-  setOcrProg(20,'Invio a GPT-4o...');
-  const resp=await fetch('https://api.openai.com/v1/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
-    body:JSON.stringify({
-      model:'gpt-4o',
-      max_tokens:2000,
-      messages:[{role:'user',content:[
-        {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64,detail:'high'}},
-        {type:'text',text:'Analizza questo scontrino italiano. Estrai SOLO le voci/prodotti acquistati. NON estrarre importi, prezzi, totali, date, iva, cassa, codici, intestazioni o testo dell\'interfaccia. Se una riga contiene prodotto + prezzo, metti solo il nome del prodotto. Rispondi ESCLUSIVAMENTE con un JSON array, zero testo aggiuntivo, zero markdown. Formato: [{"name":"nome prodotto senza prezzo","category":"frigo","qty":1,"unit":"pz"}]. Categorie: frigo=latticini/carne/pesce/verdura fresca/salumi/uova, dispensa=pasta/riso/scatolame/olio/bevande/snack/dolci, altro=detersivi/igiene/varie.'}
-      ]}]
-    })
-  });
-  setOcrProg(80,'Elaborazione...');
-  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
-  const data=await resp.json();
-  const text=data.choices?.[0]?.message?.content||'';
-  rawOcrText=text;
-  try{return JSON.parse(text.replace(/```json|```/g,'').trim()).map(p=>({...p,selected:true,tempId:uid()}));}
-  catch{throw new Error('Risposta non valida da GPT-4o');}
+function sanitizeVisionProducts(products){
+  if(!Array.isArray(products))return [];
+  const cleaned=[];
+  for(const p of products){
+    let name=String(p?.name||'')
+      .replace(/[€$£]/g,' ')
+      .replace(/\b\d+[\.,]\d{2}\b/g,' ')
+      .replace(/\s{2,}/g,' ')
+      .trim();
+    if(!name)continue;
+    if(name.length<2||name.length>40)continue;
+    const lower=name.toLowerCase();
+    if(/^(totale|subtotale|iva|resto|pagato|cassa|data|ora|scontrino|codice|p\.?iva)\b/i.test(lower))continue;
+    const letters=(name.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
+    if(letters<2)continue;
+    let cat=['frigo','dispensa','altro'].includes(p.category)?p.category:guessCategory(name);
+    let qty=parseInt(p.qty,10);
+    if(!Number.isFinite(qty)||qty<1)qty=1;
+    cleaned.push({name:titleCaseName(name),category:cat,qty:Math.min(qty,99),unit:p.unit||'pz',selected:true,tempId:uid()});
+  }
+  return mergeScannedProducts(cleaned);
 }
-function showScannedResults(){document.getElementById('ocr-loading').style.display='none';document.getElementById('ocr-count').textContent=`${cfg.ocrMode==='tesseract'?'🔒 Offline':'☁️ GPT-4o'} — ${scannedProducts.length} prodotti:`;const listEl=document.getElementById('scanned-items-list');if(!scannedProducts.length){listEl.innerHTML=`<div style="color:var(--text2);text-align:center;padding:14px">Nessun prodotto. Riprova con foto più nitida.</div>`;}else{listEl.innerHTML=scannedProducts.map((p,i)=>`<div class="scanned-item"><input type="checkbox" ${p.selected?'checked':''} onchange="scannedProducts[${i}].selected=this.checked"><span class="scanned-item-name">${esc(p.name)}${p.qty>1?' ×'+p.qty:''}</span><select onchange="scannedProducts[${i}].category=this.value"><option value="dispensa" ${p.category==='dispensa'?'selected':''}>🧺</option><option value="frigo" ${p.category==='frigo'?'selected':''}>❄️</option><option value="altro" ${p.category==='altro'?'selected':''}>📦</option></select></div>`).join('');}document.getElementById('raw-box').textContent=rawOcrText||'(nessun testo)';document.getElementById('ocr-results').style.display='block';}
+async function runVisionOcr(b64){
+  if(!cfg.sbUrl||!cfg.sbKey)throw new Error('Configura Supabase prima di usare Visione AI');
+  setOcrProg(15,'Invio immagine alla funzione OCR...');
+  const baseUrl=cfg.sbUrl.replace(/\/+$/,'');
+  const resp=await fetch(baseUrl+'/functions/v1/receipt-vision',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'apikey':cfg.sbKey,
+      'Authorization':'Bearer '+cfg.sbKey
+    },
+    body:JSON.stringify({image:b64, familyCode:cfg.familyCode||''})
+  });
+  setOcrProg(75,'Estraggo solo le voci acquistate...');
+  const data=await resp.json().catch(()=>({}));
+  if(!resp.ok)throw new Error(data.error||('OCR cloud HTTP '+resp.status));
+  rawOcrText=data.rawText||JSON.stringify(data.products||[],null,2);
+  const products=sanitizeVisionProducts(data.products||[]);
+  if(!products.length)throw new Error('Nessuna voce prodotto riconosciuta. Riprova con scontrino più vicino e ben illuminato.');
+  return products;
+}
+function showScannedResults(){document.getElementById('ocr-loading').style.display='none';document.getElementById('ocr-count').textContent=`${cfg.ocrMode==='vision'?'☁️ Visione AI':'🔒 Offline'} — ${scannedProducts.length} prodotti:`;const listEl=document.getElementById('scanned-items-list');if(!scannedProducts.length){listEl.innerHTML=`<div style="color:var(--text2);text-align:center;padding:14px">Nessun prodotto. Riprova con foto più nitida.</div>`;}else{listEl.innerHTML=scannedProducts.map((p,i)=>`<div class="scanned-item"><input type="checkbox" ${p.selected?'checked':''} onchange="scannedProducts[${i}].selected=this.checked"><span class="scanned-item-name">${esc(p.name)}${p.qty>1?' ×'+p.qty:''}</span><select onchange="scannedProducts[${i}].category=this.value"><option value="dispensa" ${p.category==='dispensa'?'selected':''}>🧺</option><option value="frigo" ${p.category==='frigo'?'selected':''}>❄️</option><option value="altro" ${p.category==='altro'?'selected':''}>📦</option></select></div>`).join('');}document.getElementById('raw-box').textContent=rawOcrText||'(nessun testo)';document.getElementById('ocr-results').style.display='block';}
 function toggleRaw(){const b=document.getElementById('raw-box');b.style.display=b.style.display==='none'?'block':'none';}
 async function addScannedProducts(){const toAdd=scannedProducts.filter(p=>p.selected);if(!toAdd.length){toast('⚠️ Seleziona almeno un prodotto');return;}for(const p of toAdd){const item={id:uid(),name:p.name,category:p.category,qty:p.qty||1,unit:p.unit||'pz',expiry:null,confirmed:false,originCategory:p.category,addedAt:Date.now()};state.cart.push(item);await pushItem('cart',item);}closeCamera();switchTop('carrello');updateBadges();toast(`🛒 ${toAdd.length} prodotti nel carrello`);}
 function retakePicture(){document.getElementById('ocr-results').style.display='none';document.getElementById('photo-preview').style.display='none';scannedProducts=[];rawOcrText='';openCamera();}
 function stopStream(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
 function closeCamera(){stopStream();closeModal('modal-camera');}
-function saveApiKeyAndContinue(){const key=document.getElementById('api-key-input').value.trim();if(!key||!key.startsWith('sk-')){toast('⚠️ API key non valida');return;}cfg.apiKey=key;saveLocal();document.getElementById('api-key-prompt').style.display='none';document.getElementById('camera-container').style.display='block';startCamera();}
+function saveApiKeyAndContinue(){setOcrMode('vision');startCamera();}cfg.apiKey=key;saveLocal();document.getElementById('api-key-prompt').style.display='none';document.getElementById('camera-container').style.display='block';startCamera();}
 
 // ═══════════════════════════════════════════
 //  SETTINGS
 // ═══════════════════════════════════════════
-function openSettings(){document.getElementById('settings-api-key').value=cfg.apiKey||'';openModal('modal-settings');}
+function openSettings(){openModal('modal-settings');}
 function saveSettings(){cfg.apiKey=document.getElementById('settings-api-key').value.trim();saveLocal();closeModal('modal-settings');toast('✅ Salvato');}
 function confirmClearData(){if(!confirm('Cancellare TUTTI i dati locali?'))return;state.products=[];state.shoppingList=[];state.cart=[];saveLocal();closeModal('modal-settings');renderMain();updateBadges();updateExpiryAlert();toast('🗑 Dati cancellati');}
 function clearSearch(){const i=document.getElementById('search-global');if(i)i.value='';renderMain();}
