@@ -1,9 +1,9 @@
 const CACHE = 'dispensa-v4';
 const ASSETS = [
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/SchrodinFridge/index.html',
+  '/SchrodinFridge/manifest.json',
+  '/SchrodinFridge/icon-192.png',
+  '/SchrodinFridge/icon-512.png'
 ];
 
 self.addEventListener('install', e => {
@@ -21,20 +21,16 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Solo GET, solo stesso dominio
   if (e.request.method !== 'GET') return;
-  if (!e.request.url.startsWith(self.location.origin)) return;
-
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
       return fetch(e.request).then(resp => {
         if (resp && resp.status === 200 && resp.type === 'basic') {
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
+          caches.open(CACHE).then(c => c.put(e.request, resp.clone()));
         }
         return resp;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => caches.match('/SchrodinFridge/index.html'));
     })
   );
 });
