@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SchrodingerFridge">
+<title>SchrodingerFridge</title>
+<link rel="manifest" href="/SchrodinFridge/manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/SchrodinFridge/icon-192.png">
+<link rel="apple-touch-icon" href="/SchrodinFridge/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0f1a;--surface:#1a1a2e;--surface2:#22223b;--surface3:#2d2d4a;
+  --border:rgba(255,255,255,0.08);--text:#f0eff5;--text2:#9896b0;--text3:#6664a0;
+  --accent:#7c6af5;--accent2:#5a4fd4;
+  --green:#4ade80;--green-dim:rgba(74,222,128,0.13);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,0.13);
+  --blue:#60a5fa;--blue-dim:rgba(96,165,250,0.13);
+  --red:#f87171;--red-dim:rgba(248,113,113,0.13);
+  --yellow:#fbbf24;--yellow-dim:rgba(251,191,36,0.13);
+  --r:16px;--r-sm:10px;--shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden;font-size:15px}
+#splash{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .5s}
+#splash.hide{opacity:0;pointer-events:none}
+.splash-icon{font-size:64px;animation:bounce 1s ease infinite alternate}
+@keyframes bounce{to{transform:translateY(-10px)}}
+.splash-title{font-family:'Fraunces',serif;font-size:28px}
+.splash-sub{color:var(--text2);font-size:14px}
+#setup-screen{position:fixed;inset:0;z-index:8000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;overflow-y:auto}
+#setup-screen.hidden{display:none}
+.setup-logo{font-size:48px;margin-bottom:14px}
+.setup-h{font-family:'Fraunces',serif;font-size:24px;margin-bottom:8px;text-align:center}
+.setup-sub{color:var(--text2);font-size:13px;text-align:center;margin-bottom:28px;line-height:1.6;max-width:320px}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;width:100%;max-width:380px;margin-bottom:10px}
+.setup-card h3{font-size:14px;margin-bottom:6px;color:var(--text)}
+.setup-card p{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px}
+.setup-or{color:var(--text3);font-size:12px;text-align:center;margin:8px 0}
+.code-display{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;font-family:monospace;font-size:20px;font-weight:700;letter-spacing:.12em;color:var(--accent);text-align:center;margin-bottom:10px}
+.sync-badge{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:3px 9px;font-size:11px;font-weight:600;cursor:pointer}
+.sync-badge.online{background:var(--green-dim);border:1px solid var(--green);color:var(--green)}
+.sync-badge.offline{background:var(--red-dim);border:1px solid var(--red);color:var(--red)}
+.sync-badge.syncing{background:var(--yellow-dim);border:1px solid var(--yellow);color:var(--yellow)}
+.sync-badge.error{background:var(--red-dim);border:1px solid var(--red);color:var(--red)}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.sync-dot.pulse{animation:pulse .8s ease infinite alternate}
+@keyframes pulse{to{opacity:.3}}
+#app{display:flex;flex-direction:column;min-height:100dvh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 14px 10px;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.app-title{font-family:'Fraunces',serif;font-size:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.header-actions{display:flex;gap:6px}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .2s;color:var(--text2)}
+.icon-btn:active{transform:scale(.92)}
+.icon-btn.accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* ALERT SCADENZE */
+.expiry-alert{display:inline-flex;align-items:center;gap:5px;background:var(--red-dim);border:1px solid var(--red);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--red);cursor:pointer;animation:alertPulse 2s ease infinite}
+@keyframes alertPulse{0%,100%{opacity:1}50%{opacity:.7}}
+.expiry-alert.warning{background:var(--yellow-dim);border-color:var(--yellow);color:var(--yellow)}
+.top-tabs{display:flex;gap:4px}
+.top-tab{flex:1;padding:7px 4px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);color:var(--text2);background:transparent;transition:all .2s;text-align:center;white-space:nowrap;position:relative}
+.top-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.top-tab .tbadge{position:absolute;top:-4px;right:2px;background:var(--red);color:#fff;border-radius:10px;min-width:15px;height:15px;font-size:9px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--surface)}
+.top-tab .tbadge.hidden{display:none}
+main{flex:1;padding:14px 14px 88px;overflow-y:auto}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--surface);border-top:1px solid var(--border);display:flex;padding:6px 0 calc(6px + env(safe-area-inset-bottom));backdrop-filter:blur(20px)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 0;color:var(--text3);font-size:9px;font-weight:600;letter-spacing:.04em;transition:all .2s}
+.nav-item .nav-icon{font-size:20px;line-height:1;transition:transform .2s}
+.nav-item.active{color:var(--accent)}
+.nav-item.active .nav-icon{transform:scale(1.1)}
+.section-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:18px 0 8px;padding:0 2px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+/* PRODUCT ITEM */
+.product-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:7px;display:flex;align-items:center;gap:9px;transition:all .2s;cursor:pointer;animation:slideIn .2s ease;position:relative}
+@keyframes slideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.product-item:active{transform:scale(.98)}
+.product-item.checked{opacity:.45;background:var(--surface2)}
+.product-item.checked .product-name{text-decoration:line-through;color:var(--text3)}
+.product-item.pending-confirm{border-color:var(--yellow);background:rgba(251,191,36,.04)}
+.product-item.expiring{border-color:var(--yellow);background:rgba(251,191,36,.06)}
+.product-item.expired{border-color:var(--red);background:rgba(248,113,113,.06)}
+.check-btn{width:25px;height:25px;border-radius:50%;flex-shrink:0;border:2px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:11px}
+.check-btn.checked{background:var(--green);border-color:var(--green)}
+.check-btn.pending-c{border-color:var(--yellow)}
+.product-info{flex:1;min-width:0}
+.product-name{font-weight:500;font-size:14px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.product-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.product-cat{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;cursor:pointer;transition:all .15s}
+.product-cat:active{transform:scale(.95)}
+.cat-frigo{background:var(--blue-dim);color:var(--blue)}
+.cat-dispensa{background:var(--orange-dim);color:var(--orange)}
+.cat-altro{background:var(--surface3);color:var(--text2)}
+.cat-spesa{background:var(--green-dim);color:var(--green)}
+.cat-carrello{background:var(--yellow-dim);color:var(--yellow)}
+.product-qty{font-size:11px;color:var(--text3)}
+.product-date{font-size:10px;color:var(--text3)}
+/* SCADENZA badge */
+.expiry-badge{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:600}
+.expiry-badge.ok{background:var(--green-dim);color:var(--green)}
+.expiry-badge.soon{background:var(--yellow-dim);color:var(--yellow)}
+.expiry-badge.expired{background:var(--red-dim);color:var(--red)}
+/* CALENDARIO btn */
+.cal-btn{width:26px;height:26px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;flex-shrink:0;transition:all .15s}
+.cal-btn:active{transform:scale(.9);background:var(--accent);border-color:var(--accent)}
+.cal-btn.has-date{border-color:var(--accent);color:var(--accent)}
+.product-actions{display:flex;gap:5px;align-items:center}
+.small-btn{width:28px;height:28px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all .15s;color:var(--text2)}
+.small-btn:active{transform:scale(.9)}
+.small-btn.confirm{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.small-btn.danger:active{background:var(--red-dim);color:var(--red)}
+.cat-inline-select{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:3px 6px;border-radius:6px;outline:none;font-family:inherit;cursor:pointer;margin-left:4px}
+.empty-state{display:flex;flex-direction:column;align-items:center;padding:44px 16px;gap:12px;text-align:center}
+.empty-icon{font-size:44px;opacity:.35}
+.empty-text{color:var(--text2);font-size:13px}
+.empty-hint{color:var(--text3);font-size:11px;max-width:230px;line-height:1.5}
+#fab{position:fixed;bottom:72px;right:16px;z-index:200;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(124,106,245,.5);transition:all .2s;color:#fff}
+#fab:active{transform:scale(.92)}
+.modal-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-width:540px;padding:18px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(30px);transition:transform .3s cubic-bezier(.34,1.56,.64,1);max-height:92dvh;overflow-y:auto}
+.modal-overlay.open .modal{transform:translateY(0)}
+/* POPUP centrato */
+.modal-overlay.center{align-items:center}
+.modal-overlay.center .modal{border-radius:var(--r);max-width:360px;padding:20px}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-family:'Fraunces',serif;font-size:18px;margin-bottom:16px}
+.input-group{margin-bottom:13px}
+.input-label{font-size:11px;color:var(--text2);margin-bottom:5px;display:block;font-weight:600;letter-spacing:.04em}
+.input-field{width:100%;padding:11px 13px;border-radius:var(--r-sm);background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.input-field:focus{border-color:var(--accent)}
+.input-field::placeholder{color:var(--text3)}
+.cat-selector{display:flex;gap:6px}
+.cat-btn{flex:1;padding:8px 4px;border-radius:var(--r-sm);border:2px solid var(--border);background:var(--surface2);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit}
+.cat-btn .ce{font-size:17px}
+.cat-btn.active.frigo{border-color:var(--blue);background:var(--blue-dim);color:var(--blue)}
+.cat-btn.active.dispensa{border-color:var(--orange);background:var(--orange-dim);color:var(--orange)}
+.cat-btn.active.altro{border-color:var(--text2);background:var(--surface3);color:var(--text)}
+.btn-row{display:flex;gap:8px;margin-top:16px}
+.btn{flex:1;padding:12px;border-radius:var(--r-sm);font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .2s;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:active{background:var(--accent2)}
+.btn-ghost{background:var(--surface2);color:var(--text2)}
+.btn-danger{background:var(--red-dim);color:var(--red)}
+.btn-share{background:var(--green-dim);color:var(--green);border:1px solid var(--green)}
+.qty-row{display:flex;align-items:center;gap:8px}
+.qty-btn{width:33px;height:33px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.qty-val{font-size:15px;font-weight:700;min-width:34px;text-align:center}
+/* CAMERA */
+#camera-container{position:relative;border-radius:var(--r);overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:3/4;max-height:65dvh}
+#camera-video{width:100%;height:100%;object-fit:cover;display:block}
+#camera-canvas{display:none}#preprocess-canvas{display:none}
+#photo-preview{width:100%;height:100%;object-fit:cover;display:none}
+.camera-overlay{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.scan-frame{width:84%;height:74%;border:2px solid rgba(255,255,255,.6);border-radius:12px;position:relative}
+.scan-corner{position:absolute;width:18px;height:18px;border-color:var(--accent);border-style:solid;border-width:0}
+.scan-corner.tl{top:-2px;left:-2px;border-top-width:3px;border-left-width:3px;border-radius:4px 0 0 0}
+.scan-corner.tr{top:-2px;right:-2px;border-top-width:3px;border-right-width:3px;border-radius:0 4px 0 0}
+.scan-corner.bl{bottom:-2px;left:-2px;border-bottom-width:3px;border-left-width:3px;border-radius:0 0 0 4px}
+.scan-corner.br{bottom:-2px;right:-2px;border-bottom-width:3px;border-right-width:3px;border-radius:0 0 4px 0}
+.scan-line{position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);animation:scanAnim 2s linear infinite;box-shadow:0 0 8px var(--accent)}
+@keyframes scanAnim{0%{top:0}100%{top:100%}}
+.capture-btn{width:58px;height:58px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.4);cursor:pointer;margin:0 auto;display:block;transition:all .15s;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.capture-btn:active{transform:scale(.92)}
+.mode-pills{display:flex;gap:5px;margin-bottom:11px}
+.mode-pill{flex:1;padding:7px 4px;border-radius:20px;font-size:11px;font-weight:700;text-align:center;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .2s}
+.mode-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.loading-state{display:flex;flex-direction:column;align-items:center;gap:9px;padding:18px}
+.spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ocr-progress{width:100%;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-top:5px}
+.ocr-progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+.scanned-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-sm);background:var(--surface2);margin-bottom:6px;border:1px solid var(--border)}
+.scanned-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.scanned-item-name{flex:1;font-size:13px}
+.scanned-item select{background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:11px;padding:3px 6px;border-radius:6px;outline:none;font-family:inherit;cursor:pointer}
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 13px;margin-bottom:13px}
+.search-bar input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;font-family:inherit}
+.search-bar input::placeholder{color:var(--text3)}
+.search-icon{font-size:16px;color:var(--text3)}
+.search-clear{font-size:15px;color:var(--text3);cursor:pointer}
+.stats-row{display:flex;gap:8px;margin-bottom:14px}
+.stat-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 8px;text-align:center}
+.stat-num{font-family:'Fraunces',serif;font-size:23px}
+.stat-label{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.info-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.6}
+.info-card strong{color:var(--text)}
+.pending-section{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:var(--r);padding:12px;margin-bottom:13px}
+.pending-header{display:flex;align-items:center;gap:7px;margin-bottom:9px;font-size:12px;font-weight:700;color:var(--yellow)}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface3);color:var(--text);padding:9px 17px;border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:all .3s;pointer-events:none;border:1px solid var(--border);white-space:nowrap;box-shadow:var(--shadow)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.ctx-menu{position:fixed;z-index:500;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:5px;min-width:172px;box-shadow:var(--shadow);animation:fadeIn .15s ease}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.ctx-item{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:background .15s}
+.ctx-item:active{background:var(--surface3);color:var(--text)}
+.ctx-item.danger{color:var(--red)}
+.ctx-divider{height:1px;background:var(--border);margin:3px 0}
+.sr-item{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:var(--r);margin-bottom:7px;border:1px solid var(--border);animation:slideIn .2s ease}
+.sr-item.home{background:rgba(74,222,128,.08);border-color:rgba(74,222,128,.25)}
+.sr-item.cart{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.25)}
+.sr-item.history{background:var(--surface2);opacity:.7}
+.sr-icon{font-size:18px;flex-shrink:0}
+.sr-info{flex:1;min-width:0}
+.sr-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-item.home .sr-name{color:var(--green)}
+.sr-item.cart .sr-name{color:var(--yellow)}
+.sr-item.history .sr-name{color:var(--text2)}
+.sr-where{font-size:11px;color:var(--text3);margin-top:2px}
+.sr-add-btn{background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:5px 9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);white-space:nowrap}
+.sr-add-btn:active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.not-found-box{display:flex;flex-direction:column;align-items:center;gap:12px;padding:30px 16px;text-align:center}
+.nf-icon{font-size:42px;opacity:.3}
+.nf-text{color:var(--text2);font-size:13px}
+.nf-add{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px}
+.nf-add:active{background:var(--accent2)}
+.swipe-hint{font-size:10px;color:var(--text3);text-align:center;margin-top:8px}
+/* EXPIRY POPUP */
+.expiry-item-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--r-sm);margin-bottom:7px;border:1px solid var(--border)}
+.expiry-item-row.soon{border-color:var(--yellow)}
+.expiry-item-row.expired{border-color:var(--red)}
+/* SHARE MODAL */
+.share-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.share-btn{padding:12px 8px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;font-family:inherit}
+.share-btn:active{background:var(--surface3)}
+.share-btn .share-icon{font-size:22px;display:block;margin-bottom:4px}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="splash-icon">🐱</div>
+  <div class="splash-title">SchrodingerFridge</div>
+  <div class="splash-sub">Caricamento...</div>
+</div>
+
+<div id="setup-screen" class="hidden">
+  <div class="setup-logo">🐱</div>
+  <div class="setup-h">SchrodingerFridge</div>
+  <div class="setup-sub">Inserisci un codice famiglia per sincronizzare le liste, oppure crea il tuo.</div>
+  <div class="setup-card" style="max-width:360px;width:100%">
+    <h3>🔗 Unisciti a una famiglia</h3>
+    <p>Inserisci il codice condiviso da un familiare.</p>
+    <input class="input-field" id="join-code" placeholder="Es. ROSSI-4829" autocomplete="off" style="text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">
+    <button class="btn btn-primary" style="width:100%" onclick="joinFamily()">Unisciti</button>
+  </div>
+  <div class="setup-or">— oppure —</div>
+  <div class="setup-card" style="max-width:360px;width:100%">
+    <h3>✨ Crea una nuova famiglia</h3>
+    <p>Genera un codice da condividere con i familiari.</p>
+    <button class="btn btn-ghost" style="width:100%" onclick="createFamily()">Crea famiglia</button>
+  </div>
+  <div style="margin-top:14px;max-width:360px;width:100%">
+    <button class="btn btn-ghost" style="width:100%;font-size:12px;opacity:.6" onclick="useOffline()">Continua offline (solo locale)</button>
+  </div>
+  <div id="setup-error" style="display:none;color:var(--red);font-size:12px;margin-top:10px;text-align:center"></div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <header>
+    <div class="header-top">
+      <div class="app-title">
+        🐱 SchrodingerFridge
+        <span id="sync-status" class="sync-badge offline" onclick="openModal('modal-supabase')">
+          <span class="sync-dot"></span><span id="sync-label">offline</span>
+        </span>
+        <span id="expiry-alert" class="expiry-alert" style="display:none" onclick="openExpiryPopup()">
+          ⚠️ <span id="expiry-count"></span>
+        </span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="btn-family">👨‍👩‍👧</button>
+        <button class="icon-btn" id="btn-settings">⚙️</button>
+        <button class="icon-btn accent" id="btn-scan">📷</button>
+      </div>
+    </div>
+    <div class="top-tabs">
+      <div class="top-tab active" data-top="ricerca">🔍 Ricerca</div>
+      <div class="top-tab" data-top="spesa">🛍️ Spesa<span class="tbadge hidden" id="badge-spesa"></span></div>
+      <div class="top-tab" data-top="carrello">🛒 Carrello<span class="tbadge hidden" id="badge-carrello"></span></div>
+    </div>
+  </header>
+  <main id="main-content"></main>
+  <button id="fab">＋</button>
+  <nav>
+    <div class="nav-item active" data-bot="dispensa"><div class="nav-icon">🧺</div>Dispensa</div>
+    <div class="nav-item" data-bot="frigo"><div class="nav-icon">❄️</div>Frigo</div>
+    <div class="nav-item" data-bot="altro"><div class="nav-icon">📦</div>Altro</div>
+    <div class="nav-item" data-bot="storico"><div class="nav-icon">📋</div>Storico</div>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<!-- MODAL SUPABASE CONFIG -->
+<div class="modal-overlay" id="modal-supabase">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">☁️ Configura Supabase</div>
+    <div class="info-card">
+      <strong>Dove trovare i dati:</strong><br>
+      1. Vai su <strong>supabase.com</strong> → tuo progetto<br>
+      2. Sidebar → ⚙️ <strong>Project Settings</strong> → <strong>General</strong> → copia <strong>Project URL</strong><br>
+      3. Sidebar → ⚙️ <strong>Project Settings</strong> → <strong>API</strong> → copia <strong>Publishable key</strong> (quella che inizia con <code>sb_publishable_</code>)
+    </div>
+    <div class="input-group">
+      <label class="input-label">SUPABASE URL</label>
+      <input class="input-field" id="sb-url" placeholder="https://xxxx.supabase.co" autocomplete="off">
+    </div>
+    <div class="input-group">
+      <label class="input-label">PUBLISHABLE KEY (anon key)</label>
+      <input class="input-field" id="sb-key" type="password" placeholder="sb_publishable_...">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeModal('modal-supabase')">Chiudi</button>
+      <button class="btn btn-primary" onclick="saveSupabaseConfig()">Salva e Connetti</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FAMILY -->
+<div class="modal-overlay" id="modal-family">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">👨‍👩‍👧 La tua Famiglia</div>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Codice famiglia:</div>
+      <div class="code-display" id="family-code-display">—</div>
+    </div>
+    <div class="share-grid">
+      <button class="share-btn" onclick="shareVia('copy')"><span class="share-icon">📋</span>Copia</button>
+      <button class="share-btn" onclick="shareVia('whatsapp')"><span class="share-icon">💬</span>WhatsApp</button>
+      <button class="share-btn" onclick="shareVia('telegram')"><span class="share-icon">✈️</span>Telegram</button>
+      <button class="share-btn" onclick="shareVia('email')"><span class="share-icon">📧</span>Email</button>
+    </div>
+    <div class="info-card" style="font-size:11px">Chiunque inserisca questo codice vede e modifica le stesse liste in tempo reale.</div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeModal('modal-family')">Chiudi</button>
+      <button class="btn btn-danger" onclick="changeFamily()">Cambia famiglia</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADD/EDIT -->
+<div class="modal-overlay" id="modal-product">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-product-title">Aggiungi Prodotto</div>
+    <div class="input-group">
+      <label class="input-label">NOME PRODOTTO</label>
+      <input class="input-field" id="prod-name" placeholder="Es. Latte intero, Pasta..." autocomplete="off">
+    </div>
+    <div class="input-group">
+      <label class="input-label">CATEGORIA</label>
+      <div class="cat-selector">
+        <button class="cat-btn active dispensa" data-cat="dispensa" onclick="selectCat('dispensa')"><span class="ce">🧺</span>Dispensa</button>
+        <button class="cat-btn frigo" data-cat="frigo" onclick="selectCat('frigo')"><span class="ce">❄️</span>Frigo</button>
+        <button class="cat-btn altro" data-cat="altro" onclick="selectCat('altro')"><span class="ce">📦</span>Altro</button>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">QUANTITÀ</label>
+      <div class="qty-row">
+        <button class="qty-btn" onclick="changeQty(-1)">−</button>
+        <div class="qty-val" id="qty-display">1</div>
+        <button class="qty-btn" onclick="changeQty(1)">+</button>
+        <input class="input-field" id="prod-qty-unit" placeholder="pz, kg, ml..." style="flex:1;max-width:88px" autocomplete="off">
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">DATA DI SCADENZA (opzionale)</label>
+      <input class="input-field" id="prod-expiry" type="date">
+    </div>
+    <div class="input-group">
+      <label class="input-label">NOTE</label>
+      <input class="input-field" id="prod-notes" placeholder="Brand, note..." autocomplete="off">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeModal('modal-product')">Annulla</button>
+      <button class="btn btn-primary" id="btn-save-product" onclick="saveProduct()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CAMERA -->
+<div class="modal-overlay" id="modal-camera">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📷 Scansiona Scontrino</div>
+    <div class="mode-pills">
+      <div class="mode-pill active" data-mode="tesseract" onclick="setOcrMode('tesseract')">🔒 Offline</div>
+      <div class="mode-pill" data-mode="claude" onclick="setOcrMode('claude')">☁️ GPT-4o Vision</div>
+    </div>
+    <div id="tesseract-info" class="info-card" style="font-size:11px">🔒 <strong>Offline</strong> — Tesseract.js, zero server. Prima volta ~10MB.</div>
+    <div id="claude-info" class="info-card" style="display:none;font-size:11px">🤖 <strong>GPT-4o Vision</strong> — categorizzazione AI precisa. Inserisci la tua <strong>OpenAI API Key</strong> (sk-...). Ottienila su <strong>platform.openai.com</strong>.</div>
+    <div id="camera-container">
+      <video id="camera-video" autoplay playsinline muted></video>
+      <canvas id="camera-canvas"></canvas><canvas id="preprocess-canvas"></canvas>
+      <img id="photo-preview" alt="">
+      <div class="camera-overlay" id="camera-overlay">
+        <div class="scan-frame">
+          <div class="scan-line"></div>
+          <div class="scan-corner tl"></div><div class="scan-corner tr"></div>
+          <div class="scan-corner bl"></div><div class="scan-corner br"></div>
+        </div>
+      </div>
+    </div>
+    <div id="camera-controls">
+      <button class="capture-btn" onclick="capturePhoto()"></button>
+      <p class="swipe-hint">Inquadra lo scontrino — sfondo scuro migliora l'OCR</p>
+    </div>
+    <div id="ocr-loading" style="display:none">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <div id="ocr-loading-text" style="color:var(--text2);font-size:13px;text-align:center">Elaborazione...</div>
+        <div class="ocr-progress"><div class="ocr-progress-bar" id="ocr-pb" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div id="ocr-results" style="display:none">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:9px" id="ocr-count"></p>
+      <div id="scanned-items-list"></div>
+      <div style="margin-bottom:8px">
+        <button class="btn btn-ghost" style="width:100%;font-size:11px;padding:7px" onclick="toggleRaw()">📄 Testo grezzo OCR</button>
+        <div id="raw-box" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px;font-size:10px;color:var(--text2);white-space:pre-wrap;max-height:100px;overflow-y:auto;margin-top:5px;font-family:monospace"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="retakePicture()">↩ Rifai</button>
+        <button class="btn btn-primary" onclick="addScannedProducts()">→ Carrello</button>
+      </div>
+    </div>
+    <div id="api-key-prompt" style="display:none">
+      <div class="info-card"><strong>🔑 API Key Anthropic</strong><br>Necessaria per Claude Vision. Oppure usa Offline.</div>
+      <input class="input-field" id="api-key-input" type="password" placeholder="sk-..." style="margin-bottom:10px">
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="setOcrMode('tesseract');document.getElementById('api-key-prompt').style.display='none';startCamera()">Usa Offline</button>
+        <button class="btn btn-primary" onclick="saveApiKeyAndContinue()">Salva</button>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn btn-ghost" onclick="closeCamera()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SETTINGS -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ Impostazioni</div>
+    <div class="info-card">
+      <strong>☁️ Claude API Key (opzionale)</strong><br>Solo per modalità Cloud OCR.
+      <input class="input-field" id="settings-api-key" type="password" placeholder="sk-..." style="margin-top:10px">
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeModal('modal-settings')">Chiudi</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Salva</button>
+    </div>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="openModal('modal-supabase');closeModal('modal-settings')">☁️ Modifica configurazione Supabase</button>
+      <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="changeFamily();closeModal('modal-settings')">🔄 Cambia famiglia</button>
+      <button class="btn btn-danger" style="width:100%" onclick="confirmClearData()">🗑 Cancella tutti i dati locali</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EXPIRY POPUP -->
+<div class="modal-overlay center" id="modal-expiry">
+  <div class="modal">
+    <div class="modal-title">⚠️ Prodotti in scadenza</div>
+    <div id="expiry-list"></div>
+    <div class="btn-row"><button class="btn btn-ghost" onclick="closeModal('modal-expiry')">Chiudi</button></div>
+  </div>
+</div>
+
+<!-- MODAL DATE PICKER -->
+<div class="modal-overlay center" id="modal-date">
+  <div class="modal">
+    <div class="modal-title" id="modal-date-title">📅 Data di scadenza</div>
+    <input class="input-field" id="date-picker" type="date" style="margin-bottom:14px">
+    <div class="btn-row">
+      <button class="btn btn-danger" style="flex:0.5" onclick="clearDate()">Rimuovi</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-date')">Annulla</button>
+      <button class="btn btn-primary" onclick="saveDate()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- CTX MENU -->
+<div id="ctx-menu" class="ctx-menu" style="display:none"></div>
+<div id="ctx-overlay" style="position:fixed;inset:0;z-index:499;display:none" onclick="closeCtx()"></div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+const DB_KEY='schrodingerFridge_v5';
+let cfg={sbUrl:'',sbKey:'',familyCode:'',apiKey:'',ocrMode:'tesseract'};
+let state={products:[],shoppingList:[],cart:[]};
+let topTab='ricerca',botTab='dispensa';
+let supaReady=false,realtimeCh=null,syncQueue=[];
+let dateEditId=null,dateEditType=null;
+
+function loadLocal(){try{const r=localStorage.getItem(DB_KEY);if(r){const d=JSON.parse(r);cfg={...cfg,...d.cfg};state={...state,...d.state};}}catch(e){}}
+function saveLocal(){localStorage.setItem(DB_KEY,JSON.stringify({cfg,state}));}
+
+// ═══════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmt(d){const dt=new Date(d),now=new Date(),diff=now-dt;
+  if(diff<3600000)return'Poco fa';if(diff<86400000)return Math.floor(diff/3600000)+'h fa';
+  if(diff<604800000)return Math.floor(diff/86400000)+'gg fa';
+  return dt.toLocaleDateString('it-IT',{day:'2-digit',month:'short'});}
+function fmtDate(s){if(!s)return'';const d=new Date(s+'T12:00:00');return d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'2-digit'});}
+function daysToExpiry(s){
+  if(!s)return null;
+  const expDate=new Date(s+'T00:00:00');
+  const today=new Date();today.setHours(0,0,0,0);expDate.setHours(0,0,0,0);
+  return Math.round((expDate-today)/86400000);
+}
+function expiryClass(s){const d=daysToExpiry(s);if(d===null)return'';if(d<0)return'expired';if(d<=3)return'soon';return'ok';}
+function expiryLabel(s){const d=daysToExpiry(s);if(d===null)return'';if(d<0)return'Scaduto';if(d===0)return'Scade oggi';if(d===1)return'Scade domani';if(d<=3)return'Scade in '+d+'gg';return fmtDate(s);}
+function catLabel(c){return{dispensa:'🧺 Dispensa',frigo:'❄️ Frigo',altro:'📦 Altro'}[c]||c;}
+function catClass(c){return{dispensa:'cat-dispensa',frigo:'cat-frigo',altro:'cat-altro'}[c]||'cat-altro';}
+function toast(msg,dur=2200){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),dur);}
+function genFamilyCode(){const w=['ROSSI','BIANCHI','VERDI','CASA','LUNA','SOLE','MARE','GATTO','FRIGO','CUCINA'];return w[Math.floor(Math.random()*w.length)]+'-'+Math.floor(1000+Math.random()*9000);}
+
+// ═══════════════════════════════════════════
+//  EXPIRY ALERTS
+// ═══════════════════════════════════════════
+function updateExpiryAlert(){
+  const now=new Date();
+  const expiring=state.products.filter(p=>!p.checked&&p.expiry&&daysToExpiry(p.expiry)<=3);
+  const alertEl=document.getElementById('expiry-alert');
+  const countEl=document.getElementById('expiry-count');
+  if(!alertEl)return;
+  if(expiring.length===0){alertEl.style.display='none';return;}
+  const expired=expiring.filter(p=>daysToExpiry(p.expiry)<0);
+  alertEl.style.display='inline-flex';
+  alertEl.className='expiry-alert'+(expired.length>0?'':' warning');
+  countEl.textContent=expiring.length+' '+(expired.length>0?'scaduti/in scadenza':'in scadenza');
+}
+function openExpiryPopup(){
+  const expiring=state.products.filter(p=>!p.checked&&p.expiry&&daysToExpiry(p.expiry)<=3)
+    .sort((a,b)=>new Date(a.expiry)-new Date(b.expiry));
+  const listEl=document.getElementById('expiry-list');
+  if(!expiring.length){listEl.innerHTML='<div style="color:var(--text2);text-align:center;padding:16px">Nessun prodotto in scadenza</div>';openModal('modal-expiry');return;}
+  listEl.innerHTML=expiring.map(p=>{
+    const ec=expiryClass(p.expiry);
+    return`<div class="expiry-item-row ${ec}">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">${esc(p.name)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${catLabel(p.category)}</div>
+      </div>
+      <span class="expiry-badge ${ec}">${expiryLabel(p.expiry)}</span>
+    </div>`;
+  }).join('');
+  openModal('modal-expiry');
+}
+
+// ═══════════════════════════════════════════
+//  DATE PICKER
+// ═══════════════════════════════════════════
+function openDatePicker(id,type,currentExpiry){
+  dateEditId=id;dateEditType=type;
+  document.getElementById('date-picker').value=currentExpiry||'';
+  document.getElementById('modal-date-title').textContent='📅 Data di scadenza';
+  openModal('modal-date');
+}
+function saveDate(){
+  const val=document.getElementById('date-picker').value;
+  applyExpiry(dateEditId,dateEditType,val||null);
+  closeModal('modal-date');
+}
+function clearDate(){applyExpiry(dateEditId,dateEditType,null);closeModal('modal-date');}
+async function applyExpiry(id,type,expiry){
+  if(type==='product'){const p=state.products.find(x=>x.id===id);if(p){p.expiry=expiry;await pushItem('product',p);}}
+  else if(type==='cart'){const c=state.cart.find(x=>x.id===id);if(c){c.expiry=expiry;await pushItem('cart',c);}}
+  else if(type==='shopping'){const s=state.shoppingList.find(x=>x.id===id);if(s){s.expiry=expiry;await pushItem('shopping',s);}}
+  renderMain();updateExpiryAlert();
+}
+
+// ═══════════════════════════════════════════
+//  SUPABASE
+// ═══════════════════════════════════════════
+const SB={
+  async req(method,path,body=null,prefer=''){
+    if(!cfg.sbUrl||!cfg.sbKey)throw new Error('Supabase non configurato');
+    const baseUrl=cfg.sbUrl.replace(/\/+$/,'');
+    const headers={'Content-Type':'application/json','apikey':cfg.sbKey,'Authorization':'Bearer '+cfg.sbKey};
+    if(prefer)headers['Prefer']=prefer;
+    const opts={method,headers};
+    if(body!==null)opts.body=JSON.stringify(body);
+    const r=await fetch(baseUrl+'/rest/v1/'+path,opts);
+    if(!r.ok){
+      const t=await r.text();
+      throw new Error((t||r.statusText||'Errore Supabase')+' ['+r.status+']');
+    }
+    const txt=await r.text();return txt?JSON.parse(txt):null;
+  },
+  // Upsert reale: con PostgREST serve Prefer: resolution=merge-duplicates.
+  // Senza questo header gli UPDATE/ri-salvataggi possono diventare INSERT normali e fallire.
+  async upsert(row){return this.req('POST','items?on_conflict=id',[row],'resolution=merge-duplicates,return=representation');},
+  async delete(id){return this.req('DELETE','items?id=eq.'+encodeURIComponent(id),null,'return=minimal');},
+  async fetchAll(fc){return this.req('GET','items?select=*&family_code=eq.'+encodeURIComponent(fc)+'&order=added_at.asc');},
+  async healthCheck(){return this.req('GET','items?select=id&limit=1');},
+  subscribe(fc,onChange){
+    if(!cfg.sbUrl||!cfg.sbKey)return null;
+    const ws=new WebSocket(cfg.sbUrl.replace('https://','wss://').replace('http://','ws://')+'/realtime/v1/websocket?apikey='+cfg.sbKey+'&vsn=1.0.0');
+    const topic='realtime:public:items:family_code=eq.'+fc;
+    let heartbeat=null;
+    ws.onopen=()=>{
+      ws.send(JSON.stringify({topic,event:'phx_join',payload:{config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'*',schema:'public',table:'items',filter:'family_code=eq.'+fc}]}},ref:'1'}));
+      heartbeat=setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:'hb'})),25000);
+    };
+    ws.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.event==='postgres_changes'||['INSERT','UPDATE','DELETE'].includes(d.event))onChange(d);}catch(err){}};
+    ws.onclose=()=>{if(heartbeat)clearInterval(heartbeat);realtimeCh=null;};
+    ws.onerror=()=>{try{ws.close();}catch(e){}};
+    return ws;
+  }
+};
+function setSyncStatus(s){
+  const badge=document.getElementById('sync-status'),label=document.getElementById('sync-label'),dot=badge?.querySelector('.sync-dot');
+  if(!badge)return;
+  badge.className='sync-badge '+s;
+  dot.className='sync-dot'+(s==='syncing'?' pulse':'');
+  label.textContent={online:'sincronizzato',syncing:'sync...',offline:'offline',error:'errore sync'}[s]||s;
+}
+function applyRow(r){
+  const base={id:r.id,name:r.name,category:r.category,qty:r.qty||1,unit:r.unit||'',notes:r.notes||'',checked:r.checked||false,confirmed:r.confirmed||false,originCategory:r.origin_category||r.category,addedAt:r.added_at||Date.now(),checkedAt:r.checked_at,expiry:r.expiry||null};
+  if(r.list_type==='product')state.products.push(base);
+  else if(r.list_type==='shopping')state.shoppingList.push({...base,source:r.notes||'',pending:!r.confirmed});
+  else if(r.list_type==='cart')state.cart.push(base);
+}
+async function fullSync(){return syncSmart();}
+
+async function syncSmart(){
+  if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode){setSyncStatus('offline');return;}
+  try{
+    setSyncStatus('syncing');
+    await SB.healthCheck(); // fallisce subito se tabella/RLS/API key non sono corretti
+    const rows=await SB.fetchAll(cfg.familyCode);
+    if(!Array.isArray(rows))throw new Error('Risposta Supabase non valida');
+
+    const pushOrFail=async(row)=>{
+      const saved=await SB.upsert(row);
+      if(!saved||!saved.length)throw new Error('Upsert senza conferma per '+row.name);
+      return saved[0];
+    };
+
+    if(rows.length===0){
+      // Remoto vuoto: pusha tutto il locale, ma NON dichiarare online se un push fallisce.
+      const allRows=buildAllRows();
+      for(const row of allRows)await pushOrFail(row);
+      const fresh=await SB.fetchAll(cfg.familyCode);
+      state.products=[];state.shoppingList=[];state.cart=[];
+      fresh.forEach(r=>applyRow(r));
+      saveLocal();renderMain();updateBadges();updateExpiryAlert();
+      if(allRows.length>0)toast('☁️ '+allRows.length+' elementi caricati su Supabase');
+    }else{
+      // Remoto ha dati: merge sicuro
+      const remoteIds=new Set(rows.map(r=>r.id));
+      const localOnlyP=state.products.filter(p=>!remoteIds.has(p.id));
+      const localOnlyS=state.shoppingList.filter(s=>!remoteIds.has(s.id));
+      const localOnlyC=state.cart.filter(c=>!remoteIds.has(c.id));
+
+      state.products=[];state.shoppingList=[];state.cart=[];
+      rows.forEach(r=>applyRow(r));
+      state.products.push(...localOnlyP);
+      state.shoppingList.push(...localOnlyS);
+      state.cart.push(...localOnlyC);
+
+      for(const p of localOnlyP)await pushOrFail(itemToRow('product',p));
+      for(const s of localOnlyS)await pushOrFail(itemToRow('shopping',s));
+      for(const c of localOnlyC)await pushOrFail(itemToRow('cart',c));
+
+      saveLocal();renderMain();updateBadges();updateExpiryAlert();
+    }
+
+    for(const item of syncQueue)await pushOrFail(item);
+    syncQueue=[];
+    setSyncStatus('online');supaReady=true;setupRealtime();
+  }catch(e){
+    setSyncStatus('error');
+    console.warn('Sync error',e);
+    toast('⚠️ Sync Supabase fallita: '+String(e.message||e).slice(0,120),5000);
+  }
+}
+
+function itemToRow(listType,item){
+  return{id:item.id,family_code:cfg.familyCode,list_type:listType,
+    name:item.name,category:item.category||'dispensa',qty:item.qty||1,
+    unit:item.unit||'',notes:item.notes||item.source||'',
+    checked:item.checked||false,confirmed:item.confirmed||false,
+    origin_category:item.originCategory||item.category||'dispensa',
+    added_at:item.addedAt||Date.now(),checked_at:item.checkedAt||null,
+    updated_at:Date.now(),expiry:item.expiry||null};
+}
+
+function buildAllRows(){
+  return[
+    ...state.products.map(p=>itemToRow('product',p)),
+    ...state.shoppingList.map(s=>itemToRow('shopping',s)),
+    ...state.cart.map(c=>itemToRow('cart',c))
+  ];
+}
+function setupRealtime(){if(realtimeCh)return;realtimeCh=SB.subscribe(cfg.familyCode,()=>{setSyncStatus('syncing');fullSync().then(()=>setSyncStatus('online'));});}
+async function pushItem(listType,item){
+  saveLocal();
+  if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode){setSyncStatus('offline');return;}
+  const row=itemToRow(listType,item);
+  try{
+    const saved=await SB.upsert(row);
+    if(!saved||!saved.length)throw new Error('Supabase non ha confermato il salvataggio');
+    setSyncStatus('online');
+  }catch(e){
+    syncQueue.push(row);
+    setSyncStatus('error');
+    console.warn('Push error',e,row);
+    toast('⚠️ Errore sincronizzazione: '+String(e.message||e).slice(0,120),4500);
+  }
+}
+async function deleteItem(id){
+  saveLocal();
+  if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode)return;
+  try{await SB.delete(id);setSyncStatus('online');}
+  catch(e){setSyncStatus('error');console.warn('Delete error',e);toast('⚠️ Eliminazione non sincronizzata: '+String(e.message||e).slice(0,100),4000);}
+}
+
+// ═══════════════════════════════════════════
+//  SETUP
+// ═══════════════════════════════════════════
+function showSetupError(msg){const el=document.getElementById('setup-error');el.textContent=msg;el.style.display='block';}
+function joinFamily(){const code=document.getElementById('join-code').value.trim().toUpperCase();if(code.length<4){showSetupError('Inserisci un codice valido');return;}cfg.familyCode=code;saveLocal();if(!cfg.sbUrl||!cfg.sbKey){openModal('modal-supabase');}else{startApp();}}
+function createFamily(){
+  cfg.familyCode=genFamilyCode();saveLocal();
+  // Mostra il codice generato e avvia subito l'app (Supabase opzionale)
+  document.getElementById('setup-screen').classList.add('hidden');
+  // Mostra modal famiglia con codice + pulsante condivisione, poi parte
+  startApp();
+  toast('Codice famiglia: '+cfg.familyCode+' — condividilo dal menu 👨‍👩‍👧',5000);
+}
+function useOffline(){cfg.familyCode=cfg.familyCode||'LOCAL-'+uid().slice(0,4);saveLocal();startApp();}
+function changeFamily(){closeModal('modal-settings');cfg.familyCode='';saveLocal();showSetupScreen();}
+function showSetupScreen(){document.getElementById('setup-screen').classList.remove('hidden');document.getElementById('app').style.display='none';document.getElementById('join-code').value=cfg.familyCode||'';}
+function saveSupabaseConfig(){
+  const url=document.getElementById('sb-url').value.trim().replace(/\/+$/,'');
+  const key=document.getElementById('sb-key').value.trim();
+  if(!url.startsWith('https://')||!key){toast('⚠️ URL o Key non validi');return;}
+  cfg.sbUrl=url;cfg.sbKey=key;saveLocal();
+  closeModal('modal-supabase');
+  if(!cfg.familyCode){showSetupScreen();return;}
+  // Non chiamare startApp/fullSync — solo tenta sync smart
+  toast('☁️ Connessione a Supabase...');
+  syncSmart();
+}
+function startApp(){
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('app').style.display='flex';
+  document.getElementById('family-code-display').textContent=cfg.familyCode;
+  renderMain();updateBadges();updateExpiryAlert();fullSync();
+}
+// Share codice famiglia
+function shareVia(method){
+  const code=cfg.familyCode;
+  const msg=`Unisciti alla mia famiglia su SchrodingerFridge! Codice: ${code}`;
+  if(method==='copy'){navigator.clipboard?.writeText(code).then(()=>toast('📋 Codice copiato!')).catch(()=>toast(code));}
+  else if(method==='whatsapp'){window.open('https://wa.me/?text='+encodeURIComponent(msg));}
+  else if(method==='telegram'){window.open('https://t.me/share/url?url=&text='+encodeURIComponent(msg));}
+  else if(method==='email'){window.open('mailto:?subject=SchrodingerFridge - Codice famiglia&body='+encodeURIComponent(msg));}
+}
+
+// ═══════════════════════════════════════════
+//  NAV
+// ═══════════════════════════════════════════
+function initNav(){
+  document.querySelectorAll('.top-tab').forEach(t=>t.addEventListener('click',()=>switchTop(t.dataset.top)));
+  document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>switchBot(n.dataset.bot)));
+}
+function switchTop(tab){topTab=tab;botTab=null;document.querySelectorAll('.top-tab').forEach(t=>t.classList.toggle('active',t.dataset.top===tab));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));renderMain();updateBadges();}
+function switchBot(tab){botTab=tab;topTab=null;document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.bot===tab));document.querySelectorAll('.top-tab').forEach(t=>t.classList.remove('active'));renderMain();updateBadges();}
+function updateBadges(){
+  const sc=state.shoppingList.length,cc=state.cart.filter(c=>!c.confirmed).length;
+  const sb=document.getElementById('badge-spesa');if(sb){sb.textContent=sc;sb.classList.toggle('hidden',sc===0);}
+  const cb=document.getElementById('badge-carrello');if(cb){cb.textContent=cc;cb.classList.toggle('hidden',cc===0);}
+}
+
+// ═══════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════
+function renderMain(){
+  const el=document.getElementById('main-content');if(!el)return;
+  if(topTab==='ricerca'){renderRicerca(el);return;}
+  if(topTab==='spesa'){renderSpesa(el);return;}
+  if(topTab==='carrello'){renderCarrello(el);return;}
+  if(botTab==='storico'){renderStorico(el);return;}
+  renderCategory(el,botTab||'dispensa');
+}
+
+function expiryBadgeHtml(p){
+  if(!p.expiry)return'';
+  const ec=expiryClass(p.expiry);
+  return`<span class="expiry-badge ${ec}">${expiryLabel(p.expiry)}</span>`;
+}
+function calBtnHtml(id,type,expiry){
+  return`<button class="cal-btn ${expiry?'has-date':''}" onclick="event.stopPropagation();openDatePicker('${id}','${type}','${expiry||''}')" title="${expiry?'Scadenza: '+fmtDate(expiry):'Aggiungi scadenza'}">📅</button>`;
+}
+
+function renderCategory(el,cat){
+  const items=state.products.filter(p=>p.category===cat);
+  const active=items.filter(p=>!p.checked),done=items.filter(p=>p.checked);
+  let html=`<div class="stats-row">
+    <div class="stat-card"><div class="stat-num">${active.length}</div><div class="stat-label">Disponibili</div></div>
+    <div class="stat-card"><div class="stat-num">${done.length}</div><div class="stat-label">Finiti</div></div>
+  </div>`;
+  if(!items.length)html+=emptyState(cat);
+  else{
+    if(active.length){html+=`<div class="section-title">Disponibili (${active.length})</div>`;active.forEach(p=>html+=productCard(p));}
+    if(done.length){html+=`<div class="section-title">Finiti (${done.length})</div>`;done.forEach(p=>html+=productCard(p));}
+  }
+  el.innerHTML=html;bindLongPress(el);
+}
+function productCard(p){
+  const ec=p.expiry?expiryClass(p.expiry):'';
+  const itemCls=p.checked?'checked':(ec==='expired'?'expired':ec==='soon'?'expiring':'');
+  return`<div class="product-item ${itemCls}" data-id="${p.id}">
+    <button class="check-btn ${p.checked?'checked':''}" onclick="toggleCheck('${p.id}')">${p.checked?'✓':''}</button>
+    <div class="product-info">
+      <div class="product-name">${esc(p.name)}</div>
+      <div class="product-meta">
+        <span class="product-cat ${catClass(p.category)}" onclick="event.stopPropagation();cycleCat('${p.id}')">${catLabel(p.category)}</span>
+        ${p.qty?`<span class="product-qty">×${p.qty}${p.unit?' '+p.unit:''}</span>`:''}
+        ${expiryBadgeHtml(p)}
+        <span class="product-date">${fmt(p.addedAt)}</span>
+      </div>
+    </div>
+    <div class="product-actions">
+      ${calBtnHtml(p.id,'product',p.expiry)}
+      <button class="small-btn" onclick="event.stopPropagation();openEdit('${p.id}')">✏️</button>
+      <button class="small-btn danger" onclick="event.stopPropagation();deleteProduct('${p.id}')">🗑</button>
+    </div>
+  </div>`;
+}
+// Cicla categoria con tap sulla targhetta
+async function cycleCat(id){
+  const p=state.products.find(x=>x.id===id);if(!p)return;
+  const order=['dispensa','frigo','altro'];
+  const idx=order.indexOf(p.category);
+  p.category=order[(idx+1)%3];
+  await pushItem('product',p);renderMain();updateBadges();toast(`↪ ${esc(p.name)} → ${catLabel(p.category)}`);
+}
+
+function emptyState(cat){
+  const m={dispensa:['🧺','Dispensa vuota','Aggiungi con + o scansiona uno scontrino'],frigo:['❄️','Frigo vuoto',''],altro:['📦','Nessun prodotto',''],storico:['📋','Nessuno storico',''],spesa:['🛍️','Lista spesa vuota',''],carrello:['🛒','Carrello vuoto','Scansiona uno scontrino con 📷']};
+  const[i,t,h]=m[cat]||['📋','Vuoto',''];
+  return`<div class="empty-state"><div class="empty-icon">${i}</div><div class="empty-text">${t}</div><div class="empty-hint">${h}</div></div>`;
+}
+function bindLongPress(el){
+  let timer;
+  el.querySelectorAll('.product-item').forEach(item=>{
+    item.addEventListener('touchstart',e=>{timer=setTimeout(()=>showCtx(e.touches[0],item.dataset.id),600);});
+    item.addEventListener('touchend',()=>clearTimeout(timer));
+    item.addEventListener('touchmove',()=>clearTimeout(timer));
+  });
+}
+
+function renderStorico(el){
+  const sv=(el.querySelector('#search-storico')||{}).value||'';
+  const all=[...state.products].sort((a,b)=>b.addedAt-a.addedAt);
+  const filtered=sv?all.filter(p=>p.name.toLowerCase().includes(sv.toLowerCase())):all;
+  let html=`<div class="search-bar"><span class="search-icon">🔍</span><input id="search-storico" placeholder="Cerca nello storico..." oninput="renderMain()" value="${esc(sv)}" autocomplete="off"></div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">Totale</div></div>
+    <div class="stat-card"><div class="stat-num">${state.products.filter(p=>p.category==='frigo').length}</div><div class="stat-label">Frigo</div></div>
+    <div class="stat-card"><div class="stat-num">${state.products.filter(p=>p.category==='dispensa').length}</div><div class="stat-label">Dispensa</div></div>
+  </div>`;
+  if(!filtered.length)html+=`<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Nessun risultato</div></div>`;
+  else filtered.forEach(p=>html+=productCard(p));
+  el.innerHTML=html;bindLongPress(el);
+}
+
+// SPESA — selezionando un prodotto passa a Carrello
+function renderSpesa(el){
+  const pending=state.shoppingList.filter(s=>s.pending),confirmed=state.shoppingList.filter(s=>!s.pending);
+  const sv=(el.querySelector('#search-spesa')||{}).value||'';
+  let html=`<div class="search-bar"><span class="search-icon">🔍</span><input id="search-spesa" placeholder="Cerca prodotti da comprare..." oninput="renderMain()" value="${esc(sv)}" autocomplete="off"></div>`;
+  if(pending.length){
+    html+=`<div class="pending-section"><div class="pending-header">⏳ Da confermare (${pending.length})</div>`;
+    pending.forEach(s=>{
+      html+=`<div class="scanned-item" style="margin-bottom:6px">
+        <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(s.name)}</div><div style="font-size:10px;color:var(--text3)">Da: ${esc(s.source||'lista')}</div></div>
+        <button class="small-btn confirm" onclick="confirmSpesa('${s.id}')">✅</button>
+        <button class="small-btn danger" onclick="removeSpesa('${s.id}')">✕</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  const filtered=confirmed.filter(s=>!sv||s.name.toLowerCase().includes(sv.toLowerCase()));
+  if(!filtered.length&&!pending.length)html+=emptyState('spesa');
+  else if(filtered.length){
+    html+=`<div class="section-title">Da comprare — tocca per spostare al carrello (${filtered.length})</div>`;
+    filtered.forEach(s=>{
+      html+=`<div class="product-item" data-sid="${s.id}" onclick="moveSpesaToCart('${s.id}')">
+        <button class="check-btn" onclick="event.stopPropagation();moveSpesaToCart('${s.id}')">🛒</button>
+        <div class="product-info">
+          <div class="product-name">${esc(s.name)}</div>
+          <div class="product-meta">
+            <span class="product-cat cat-spesa">🛍️ Spesa</span>
+            ${expiryBadgeHtml(s)}
+            <span class="product-date">${fmt(s.addedAt)}</span>
+          </div>
+        </div>
+        <div class="product-actions">
+          ${calBtnHtml(s.id,'shopping',s.expiry)}
+          <button class="small-btn danger" onclick="event.stopPropagation();removeSpesa('${s.id}')">✕</button>
+        </div>
+      </div>`;
+    });
+  }
+  if(sv.length>1){
+    const sugg=state.products.filter(p=>p.name.toLowerCase().includes(sv.toLowerCase())).filter(p=>!state.shoppingList.find(s=>s.name.toLowerCase()===p.name.toLowerCase())).slice(0,4);
+    if(sugg.length){html+=`<div class="section-title">Dal tuo storico</div>`;sugg.forEach(p=>{html+=`<div class="product-item" onclick="addToSpesaFromHistory('${p.id}')"><span style="font-size:17px">➕</span><div class="product-info"><div class="product-name">${esc(p.name)}</div><div class="product-meta"><span class="product-cat ${catClass(p.category)}">${catLabel(p.category)}</span></div></div></div>`;});}
+  }
+  el.innerHTML=html;
+  const si=el.querySelector('#search-spesa');if(si&&sv){si.focus();si.setSelectionRange(sv.length,sv.length);}
+}
+
+// CARRELLO — selezionando passa a categoria corrispondente
+function renderCarrello(el){
+  const pending=state.cart.filter(c=>!c.confirmed),confirmed=state.cart.filter(c=>c.confirmed);
+  if(!state.cart.length){el.innerHTML=emptyState('carrello');return;}
+  let html='';
+  if(pending.length){
+    html+=`<div class="section-title">Da confermare — tocca ✓ per spostare nella categoria (${pending.length})</div>`;
+    pending.forEach(c=>{
+      html+=`<div class="product-item pending-confirm" data-cid="${c.id}">
+        <button class="check-btn pending-c" onclick="confirmCartItem('${c.id}')" title="Conferma e sposta">✓</button>
+        <div class="product-info">
+          <div class="product-name">${esc(c.name)}</div>
+          <div class="product-meta">
+            <span style="font-size:10px;color:var(--text2)">→</span>
+            <select class="cat-inline-select" onchange="changeCartCat('${c.id}',this.value)">
+              <option value="dispensa" ${c.category==='dispensa'?'selected':''}>🧺 Dispensa</option>
+              <option value="frigo" ${c.category==='frigo'?'selected':''}>❄️ Frigo</option>
+              <option value="altro" ${c.category==='altro'?'selected':''}>📦 Altro</option>
+            </select>
+            ${c.qty>1?`<span class="product-qty">×${c.qty}</span>`:''}
+            ${expiryBadgeHtml(c)}
+          </div>
+        </div>
+        <div class="product-actions">
+          ${calBtnHtml(c.id,'cart',c.expiry)}
+          <button class="small-btn danger" onclick="removeCartItem('${c.id}')">🗑</button>
+        </div>
+      </div>`;
+    });
+    html+=`<div style="display:flex;gap:7px;margin-bottom:14px">
+      <button class="btn btn-ghost" style="font-size:12px;padding:8px" onclick="rejectAllCart()">✕ Scarta tutti</button>
+      <button class="btn btn-primary" style="font-size:12px;padding:8px" onclick="confirmAllCart()">✅ Conferma tutti</button>
+    </div>`;
+  }
+  if(confirmed.length){
+    html+=`<div class="section-title">Confermati (${confirmed.length})</div>`;
+    confirmed.forEach(c=>{
+      html+=`<div class="product-item" data-cid="${c.id}">
+        <span style="font-size:17px">✅</span>
+        <div class="product-info"><div class="product-name">${esc(c.name)}</div>
+        <div class="product-meta"><span class="product-cat ${catClass(c.category)}">${catLabel(c.category)}</span>${c.qty>1?`<span class="product-qty">×${c.qty}</span>`:''}${expiryBadgeHtml(c)}</div></div>
+        <button class="small-btn danger" onclick="removeCartItem('${c.id}')">🗑</button>
+      </div>`;
+    });
+    html+=`<button class="btn btn-primary" style="width:100%;margin-top:7px" onclick="moveCartToStorage()">📥 Sposta in Dispensa/Frigo/Altro</button>`;
+  }
+  el.innerHTML=html;
+}
+
+function renderRicerca(el){
+  const sv=(el.querySelector('#search-global')||{}).value||'';
+  let html=`<div class="search-bar"><span class="search-icon">🔍</span><input id="search-global" placeholder="Cerca in tutti i prodotti..." oninput="renderMain()" value="${esc(sv)}" autocomplete="off">${sv?`<span class="search-clear" onclick="clearSearch()">✕</span>`:''}</div>`;
+  if(!sv){html+=`<div class="empty-state"><div class="empty-icon" style="opacity:.2">🔍</div><div class="empty-text" style="color:var(--text3)">Digita per cercare ovunque</div></div>`;el.innerHTML=html;const i=el.querySelector('#search-global');if(i)i.focus();return;}
+  const q=sv.toLowerCase(),results=[],seen=new Set();
+  state.products.filter(p=>!p.checked&&p.name.toLowerCase().includes(q)).forEach(p=>{const k=p.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'home',name:p.name,where:catLabel(p.category),pid:p.id});}});
+  state.shoppingList.filter(s=>s.name.toLowerCase().includes(q)).forEach(s=>{const k=s.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:s.name,where:'🛍️ Lista Spesa'});}else{const ex=results.find(r=>r.name.toLowerCase()===k);if(ex)ex.alsoSpesa=true;}});
+  state.cart.filter(c=>c.name.toLowerCase().includes(q)).forEach(c=>{const k=c.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:c.name,where:'🛒 Carrello'});}});
+  state.products.filter(p=>p.checked&&p.name.toLowerCase().includes(q)).forEach(p=>{const k=p.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'history',name:p.name,where:catLabel(p.category)+' (storico)',pid:p.id});}});
+  if(!results.length){
+    html+=`<div class="not-found-box"><div class="nf-icon">🤷</div><div class="nf-text">Prodotto "<strong>${esc(sv)}</strong>" non presente</div><button class="nf-add" onclick="addSearchToSpesa('${esc(sv)}')">➕ Aggiungi "${esc(sv)}" alla Lista Spesa</button></div>`;
+  }else{
+    html+=`<div class="section-title">${results.length} risultat${results.length===1?'o':'i'}</div>`;
+    results.forEach(r=>{
+      const cls=r.type==='home'?'home':r.type==='cart'?'cart':'history';
+      const icon=r.type==='home'?'🏠':r.type==='cart'?'🛒':'📋';
+      const w=r.alsoSpesa?r.where+' · 🛍️ in spesa':r.where;
+      html+=`<div class="sr-item ${cls}"><span class="sr-icon">${icon}</span><div class="sr-info"><div class="sr-name">${esc(r.name)}</div><div class="sr-where">${esc(w)}</div></div>${r.type==='history'?`<button class="sr-add-btn" onclick="addToSpesaByName('${esc(r.name)}')">+ Spesa</button>`:''}${r.type==='home'&&!r.alsoSpesa?`<button class="sr-add-btn" onclick="addToSpesaFromPid('${r.pid}')">+ Spesa</button>`:''}</div>`;
+    });
+  }
+  el.innerHTML=html;
+  const i=el.querySelector('#search-global');if(i&&sv){i.focus();i.setSelectionRange(sv.length,sv.length);}
+}
+
+// ═══════════════════════════════════════════
+//  PRODUCT OPS
+// ═══════════════════════════════════════════
+let editingId=null,currentQty=1,currentCat='dispensa';
+function openAdd(){
+  editingId=null;currentQty=1;currentCat=botTab&&botTab!=='storico'?botTab:'dispensa';
+  document.getElementById('modal-product-title').textContent='Aggiungi Prodotto';
+  document.getElementById('prod-name').value='';document.getElementById('prod-notes').value='';
+  document.getElementById('prod-qty-unit').value='';document.getElementById('prod-expiry').value='';
+  document.getElementById('qty-display').textContent='1';document.getElementById('btn-save-product').textContent='Aggiungi';
+  selectCat(currentCat);openModal('modal-product');setTimeout(()=>document.getElementById('prod-name').focus(),400);
+}
+function openEdit(id){
+  const p=state.products.find(x=>x.id===id);if(!p)return;
+  editingId=id;currentQty=p.qty||1;currentCat=p.category;
+  document.getElementById('modal-product-title').textContent='Modifica';
+  document.getElementById('prod-name').value=p.name;document.getElementById('prod-notes').value=p.notes||'';
+  document.getElementById('prod-qty-unit').value=p.unit||'';document.getElementById('prod-expiry').value=p.expiry||'';
+  document.getElementById('qty-display').textContent=currentQty;document.getElementById('btn-save-product').textContent='Salva Modifiche';
+  selectCat(currentCat);openModal('modal-product');
+}
+function selectCat(cat){currentCat=cat;document.querySelectorAll('.cat-btn').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));}
+function changeQty(d){currentQty=Math.max(1,currentQty+d);document.getElementById('qty-display').textContent=currentQty;}
+async function saveProduct(){
+  const name=document.getElementById('prod-name').value.trim();if(!name){toast('⚠️ Inserisci il nome');return;}
+  const unit=document.getElementById('prod-qty-unit').value.trim(),notes=document.getElementById('prod-notes').value.trim(),expiry=document.getElementById('prod-expiry').value||null;
+  if(editingId){const p=state.products.find(x=>x.id===editingId);if(p){p.name=name;p.category=currentCat;p.qty=currentQty;p.unit=unit;p.notes=notes;p.expiry=expiry;}await pushItem('product',p);toast('✅ Aggiornato');}
+  else{const item={id:uid(),name,category:currentCat,qty:currentQty,unit,notes,expiry,checked:false,originCategory:currentCat,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);toast(`✅ "${name}" aggiunto`);}
+  closeModal('modal-product');renderMain();updateBadges();updateExpiryAlert();
+}
+async function toggleCheck(id){
+  const p=state.products.find(x=>x.id===id);if(!p)return;
+  p.checked=!p.checked;p.checkedAt=p.checked?Date.now():null;
+  if(p.checked&&!state.shoppingList.find(s=>s.name.toLowerCase()===p.name.toLowerCase())){
+    const item={id:uid(),name:p.name,source:catLabel(p.category).replace(/[🧺❄️📦]/g,'').trim(),originCategory:p.category,pending:true,confirmed:false,addedAt:Date.now()};
+    state.shoppingList.push(item);await pushItem('shopping',item);
+    toast(`↩ "${p.name}" → Lista spesa (da confermare)`);
+  }else toast(p.checked?'✅ Spuntato':'↩ Ripristinato');
+  await pushItem('product',p);renderMain();updateBadges();updateExpiryAlert();
+}
+async function deleteProduct(id){
+  const p=state.products.find(x=>x.id===id);if(!p)return;
+  if(!confirm(`Eliminare "${p.name}"?`))return;
+  state.products=state.products.filter(x=>x.id!==id);await deleteItem(id);renderMain();updateBadges();updateExpiryAlert();toast('🗑 Eliminato');
+}
+async function moveProduct(id,cat){const p=state.products.find(x=>x.id===id);if(p){p.category=cat;await pushItem('product',p);renderMain();updateBadges();toast(`↪ Spostato in ${catLabel(cat)}`);}}
+
+// ═══════════════════════════════════════════
+//  SPESA OPS
+// ═══════════════════════════════════════════
+async function addToSpesaManual(){const name=prompt('Aggiungi alla lista spesa:');if(!name?.trim())return;const item={id:uid(),name:name.trim(),source:'manuale',originCategory:'dispensa',pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);renderMain();updateBadges();toast(`🛍️ "${name.trim()}" aggiunto`);}
+async function addToSpesaFromHistory(pid){const p=state.products.find(x=>x.id===pid);if(!p)return;if(state.shoppingList.find(s=>s.name.toLowerCase()===p.name.toLowerCase())){toast('⚠️ Già in lista');return;}const item={id:uid(),name:p.name,source:catLabel(p.category),originCategory:p.category,pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);renderMain();updateBadges();toast(`✅ "${p.name}" aggiunto`);}
+async function addToSpesaFromPid(pid){return addToSpesaFromHistory(pid);}
+async function addToSpesaByName(name){name=name.replace(/&amp;/g,'&');if(state.shoppingList.find(s=>s.name.toLowerCase()===name.toLowerCase())){toast('⚠️ Già in lista');return;}const item={id:uid(),name,source:'storico',originCategory:'dispensa',pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);updateBadges();toast(`🛍️ "${name}" aggiunto`);}
+async function addSearchToSpesa(name){name=name.replace(/&amp;/g,'&');const item={id:uid(),name,source:'ricerca',originCategory:'dispensa',pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);updateBadges();toast(`🛍️ "${name}" aggiunto alla lista`);}
+async function confirmSpesa(sid){const s=state.shoppingList.find(x=>x.id===sid);if(!s)return;s.pending=false;s.confirmed=true;await pushItem('shopping',s);renderMain();updateBadges();}
+async function removeSpesa(sid){state.shoppingList=state.shoppingList.filter(x=>x.id!==sid);await deleteItem(sid);renderMain();updateBadges();}
+
+// SPESA → CARRELLO (selezionando un prodotto dalla lista spesa)
+async function moveSpesaToCart(sid){
+  const s=state.shoppingList.find(x=>x.id===sid);if(!s)return;
+  // aggiungi al carrello
+  const cartItem={id:uid(),name:s.name,category:s.originCategory||'dispensa',qty:1,unit:'',expiry:s.expiry||null,confirmed:false,originCategory:s.originCategory||'dispensa',addedAt:Date.now()};
+  state.cart.push(cartItem);await pushItem('cart',cartItem);
+  // rimuovi dalla spesa
+  state.shoppingList=state.shoppingList.filter(x=>x.id!==sid);await deleteItem(sid);
+  switchTop('carrello');updateBadges();toast(`🛒 "${s.name}" → Carrello`);
+}
+
+async function buyItem(sid){
+  const s=state.shoppingList.find(x=>x.id===sid);if(!s)return;
+  const targetCat=s.originCategory||'dispensa';
+  const existing=state.products.find(p=>p.name.toLowerCase()===s.name.toLowerCase());
+  if(!existing){const item={id:uid(),name:s.name,category:targetCat,qty:1,unit:'',notes:'',expiry:s.expiry||null,checked:false,originCategory:targetCat,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);toast(`✅ "${s.name}" → ${catLabel(targetCat)}`);}
+  else{existing.checked=false;await pushItem('product',existing);toast(`✅ "${s.name}" ripristinato`);}
+  state.shoppingList=state.shoppingList.filter(x=>x.id!==sid);await deleteItem(sid);renderMain();updateBadges();updateExpiryAlert();
+}
+async function addToSpesaDirect(id){const p=state.products.find(x=>x.id===id);if(!p)return;if(state.shoppingList.find(s=>s.name.toLowerCase()===p.name.toLowerCase())){toast('⚠️ Già in lista');return;}const item={id:uid(),name:p.name,source:catLabel(p.category),originCategory:p.category,pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);updateBadges();toast(`🛍️ "${p.name}" → lista spesa`);}
+
+// ═══════════════════════════════════════════
+//  CARRELLO OPS
+// ═══════════════════════════════════════════
+function changeCartCat(cid,newCat){const c=state.cart.find(x=>x.id===cid);if(c){c.category=newCat;saveLocal();}}
+async function confirmCartItem(cid){
+  const c=state.cart.find(x=>x.id===cid);if(!c)return;
+  // Sposta direttamente nella categoria selezionata come prodotto
+  const existing=state.products.find(p=>p.name.toLowerCase()===c.name.toLowerCase());
+  if(!existing){const item={id:uid(),name:c.name,category:c.category,qty:c.qty||1,unit:c.unit||'pz',notes:'',expiry:c.expiry||null,checked:false,originCategory:c.category,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);}
+  else{existing.checked=false;existing.category=c.category;if(c.expiry)existing.expiry=c.expiry;await pushItem('product',existing);}
+  state.cart=state.cart.filter(x=>x.id!==cid);await deleteItem(cid);
+  renderMain();updateBadges();updateExpiryAlert();toast(`✅ "${c.name}" → ${catLabel(c.category)}`);
+}
+async function removeCartItem(cid){state.cart=state.cart.filter(x=>x.id!==cid);await deleteItem(cid);renderMain();updateBadges();}
+async function confirmAllCart(){
+  for(const c of state.cart){
+    if(!c.confirmed){
+      const existing=state.products.find(p=>p.name.toLowerCase()===c.name.toLowerCase());
+      if(!existing){const item={id:uid(),name:c.name,category:c.category,qty:c.qty||1,unit:c.unit||'pz',notes:'',expiry:c.expiry||null,checked:false,originCategory:c.category,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);}
+      else{existing.checked=false;existing.category=c.category;if(c.expiry)existing.expiry=c.expiry;await pushItem('product',existing);}
+      await deleteItem(c.id);
+    }
+  }
+  state.cart=[];renderMain();updateBadges();updateExpiryAlert();toast('✅ Tutti spostati nelle categorie');
+}
+async function rejectAllCart(){if(!confirm('Scartare tutti i prodotti non confermati?'))return;const toRemove=state.cart.filter(c=>!c.confirmed);for(const c of toRemove)await deleteItem(c.id);state.cart=state.cart.filter(c=>c.confirmed);renderMain();updateBadges();}
+async function moveCartToStorage(){
+  const confirmed=state.cart.filter(c=>c.confirmed);
+  for(const c of confirmed){
+    const existing=state.products.find(p=>p.name.toLowerCase()===c.name.toLowerCase());
+    if(existing){existing.qty=(existing.qty||1)+(c.qty||1);existing.checked=false;if(c.expiry)existing.expiry=c.expiry;await pushItem('product',existing);}
+    else{const item={id:uid(),name:c.name,category:c.category,qty:c.qty||1,unit:c.unit||'pz',notes:'',expiry:c.expiry||null,checked:false,originCategory:c.category,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);}
+    await deleteItem(c.id);
+  }
+  state.cart=state.cart.filter(c=>!c.confirmed);renderMain();updateBadges();updateExpiryAlert();toast(`📥 ${confirmed.length} prodotti spostati`);
+}
+
+// ═══════════════════════════════════════════
+//  CTX MENU
+// ═══════════════════════════════════════════
+function showCtx(e,id){e.preventDefault?.();const p=state.products.find(x=>x.id===id);if(!p)return;
+  const cats=['dispensa','frigo','altro'].filter(c=>c!==p.category);
+  let html=`<div class="ctx-item" onclick="openEdit('${id}');closeCtx()">✏️ Modifica</div><div class="ctx-item" onclick="addToSpesaDirect('${id}');closeCtx()">🛍️ Aggiungi a spesa</div><div class="ctx-divider"></div>`;
+  cats.forEach(c=>html+=`<div class="ctx-item" onclick="moveProduct('${id}','${c}');closeCtx()">↪ Sposta in ${catLabel(c)}</div>`);
+  html+=`<div class="ctx-divider"></div><div class="ctx-item danger" onclick="deleteProduct('${id}');closeCtx()">🗑 Elimina</div>`;
+  const m=document.getElementById('ctx-menu');m.innerHTML=html;
+  const x=Math.min(e.clientX||100,window.innerWidth-185),y=Math.min(e.clientY||100,window.innerHeight-185);
+  m.style.left=x+'px';m.style.top=y+'px';m.style.display='block';document.getElementById('ctx-overlay').style.display='block';}
+function closeCtx(){document.getElementById('ctx-menu').style.display='none';document.getElementById('ctx-overlay').style.display='none';}
+
+// ═══════════════════════════════════════════
+//  CARRELLO AGGIUNTA MANUALE
+// ═══════════════════════════════════════════
+function addToCarrelloChoice(){
+  // Mostra scelta: manuale o fotocamera
+  const name=prompt('Aggiungi al carrello (nome prodotto):');
+  if(!name?.trim())return;
+  addToCarrelloManual(name.trim());
+}
+async function addToCarrelloManual(name){
+  const item={id:uid(),name,category:'dispensa',qty:1,unit:'pz',expiry:null,confirmed:false,originCategory:'dispensa',addedAt:Date.now()};
+  state.cart.push(item);await pushItem('cart',item);
+  renderMain();updateBadges();toast(`🛒 "${name}" aggiunto al carrello`);
+}
+
+// ═══════════════════════════════════════════
+//  OCR / CAMERA
+// ═══════════════════════════════════════════
+let stream=null,capturedImageData=null,scannedProducts=[],rawOcrText='';
+function setOcrMode(mode){cfg.ocrMode=mode;saveLocal();document.querySelectorAll('.mode-pill').forEach(p=>p.classList.toggle('active',p.dataset.mode===mode));document.getElementById('tesseract-info').style.display=mode==='tesseract'?'block':'none';document.getElementById('claude-info').style.display=mode==='claude'?'block':'none';}
+function setOcrProg(pct,msg){document.getElementById('ocr-pb').style.width=pct+'%';document.getElementById('ocr-loading-text').textContent=msg;}
+async function openCamera(){
+  setOcrMode(cfg.ocrMode||'tesseract');
+  ['camera-controls','camera-container'].forEach(id=>document.getElementById(id).style.display='block');
+  ['ocr-loading','ocr-results','api-key-prompt'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('camera-overlay').style.display='flex';
+  document.getElementById('photo-preview').style.display='none';
+  document.getElementById('camera-video').style.display='block';
+  if(cfg.ocrMode==='claude'&&!cfg.apiKey){document.getElementById('api-key-prompt').style.display='block';document.getElementById('camera-controls').style.display='none';document.getElementById('camera-container').style.display='none';openModal('modal-camera');return;}
+  openModal('modal-camera');await startCamera();
+}
+async function startCamera(){stopStream();
+  const constraints=[{video:{facingMode:{exact:'environment'},width:{ideal:1920},height:{ideal:1440}}},{video:{facingMode:'environment'}},{video:{facingMode:'user'}},{video:true}];
+  let lastErr=null;
+  for(const c of constraints){try{stream=await navigator.mediaDevices.getUserMedia(c);const vid=document.getElementById('camera-video');vid.srcObject=stream;await new Promise(res=>{vid.onloadedmetadata=res;setTimeout(res,3000);});vid.play();return;}catch(e){lastErr=e;}}
+  closeCamera();toast(`❌ Fotocamera: ${lastErr?.message||'permesso negato'}`,5000);
+}
+function getScanFrameCrop(video){
+  const vw=video.videoWidth||640, vh=video.videoHeight||480;
+  const sw=Math.max(1,Math.round(vw*0.84));
+  const sh=Math.max(1,Math.round(vh*0.74));
+  const sx=Math.max(0,Math.round((vw-sw)/2));
+  const sy=Math.max(0,Math.round((vh-sh)/2));
+  return {sx,sy,sw,sh};
+}
+async function capturePhoto(){
+  const video=document.getElementById('camera-video'), canvas=document.getElementById('camera-canvas');
+  const crop=getScanFrameCrop(video);
+  canvas.width=crop.sw; canvas.height=crop.sh;
+  const ctx=canvas.getContext('2d',{alpha:false});
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // Legge SOLO ciò che è dentro il riquadro di scansione, non tutto lo schermo.
+  ctx.drawImage(video,crop.sx,crop.sy,crop.sw,crop.sh,0,0,canvas.width,canvas.height);
+  capturedImageData=canvas.toDataURL('image/jpeg',.94).split(',')[1];
+  const prev=document.getElementById('photo-preview');
+  prev.src=canvas.toDataURL('image/jpeg',.94); prev.style.display='block';
+  document.getElementById('camera-video').style.display='none';
+  document.getElementById('camera-overlay').style.display='none';
+  document.getElementById('camera-controls').style.display='none';
+  stopStream();
+  document.getElementById('ocr-loading').style.display='block';
+  setOcrProg(5,'Avvio OCR...');
+  try{
+    const products=cfg.ocrMode==='tesseract'?await runTesseractOcr(canvas):await runClaudeOcr(capturedImageData);
+    scannedProducts=products;
+    setOcrProg(100,'Completato!');
+    setTimeout(showScannedResults,300);
+  }catch(err){
+    document.getElementById('ocr-loading').style.display='none';
+    toast(`❌ ${err.message}`,5000);
+    document.getElementById('camera-controls').style.display='block';
+    document.getElementById('photo-preview').style.display='none';
+    document.getElementById('camera-container').style.display='none';
+  }
+}
+function preprocessForOcr(src,mode='binary'){
+  const proc=document.getElementById('preprocess-canvas');
+  const scale=src.width<900?2:1.5;
+  proc.width=Math.round(src.width*scale); proc.height=Math.round(src.height*scale);
+  const ctx=proc.getContext('2d',{willReadFrequently:true});
+  ctx.clearRect(0,0,proc.width,proc.height);
+  ctx.imageSmoothingEnabled=true;
+  ctx.filter='grayscale(1) contrast(1.7) brightness(1.08)';
+  ctx.drawImage(src,0,0,proc.width,proc.height);
+  ctx.filter='none';
+  if(mode==='gray')return proc;
+  const imgData=ctx.getImageData(0,0,proc.width,proc.height), d=imgData.data;
+  const gray=new Uint8ClampedArray(proc.width*proc.height);
+  for(let i=0;i<d.length;i+=4){gray[i/4]=Math.round(.299*d[i]+.587*d[i+1]+.114*d[i+2]);}
+  const block=28;
+  for(let by=0;by<proc.height;by+=block){
+    for(let bx=0;bx<proc.width;bx+=block){
+      let sum=0,count=0;
+      for(let y=by;y<Math.min(by+block,proc.height);y++)for(let x=bx;x<Math.min(bx+block,proc.width);x++){sum+=gray[y*proc.width+x];count++;}
+      const thr=Math.max(80,Math.min(225,(sum/Math.max(1,count))-10));
+      for(let y=by;y<Math.min(by+block,proc.height);y++)for(let x=bx;x<Math.min(bx+block,proc.width);x++){
+        const idx=y*proc.width+x, v=gray[idx]<thr?0:255, di=idx*4;
+        d[di]=d[di+1]=d[di+2]=v; d[di+3]=255;
+      }
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+  return proc;
+}
+async function loadTesseract(){if(window.Tesseract)return;return new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=res;s.onerror=()=>rej(new Error('Impossibile caricare Tesseract.js'));document.head.appendChild(s);});}
+async function runTesseractOcr(canvas){
+  setOcrProg(10,'Caricamento OCR...');
+  await loadTesseract();
+  const psm=(window.Tesseract&&window.Tesseract.PSM&&window.Tesseract.PSM.SINGLE_BLOCK)||6;
+  const conf={
+    logger:m=>{if(m.status==='recognizing text')setOcrProg(40+Math.round((m.progress||0)*35),'Riconoscimento: '+Math.round((m.progress||0)*100)+'%');},
+    tessedit_pageseg_mode:psm,
+    preserve_interword_spaces:'1'
+  };
+  setOcrProg(24,'Miglioro immagine...');
+  const proc=preprocessForOcr(canvas,'binary');
+  setOcrProg(40,'Leggo le voci...');
+  const first=await Tesseract.recognize(proc,'ita+eng',conf);
+  const text1=first?.data?.text||'';
+  let products=parseReceiptText(text1);
+  rawOcrText=text1;
+  // Se la lettura è scarsa, riprova con immagine grigia non binarizzata.
+  if(products.length<2){
+    setOcrProg(78,'Seconda lettura...');
+    const proc2=preprocessForOcr(canvas,'gray');
+    const second=await Tesseract.recognize(proc2,'ita+eng',conf);
+    const text2=second?.data?.text||'';
+    rawOcrText=[text1,text2].filter(Boolean).join('\n────\n');
+    products=mergeScannedProducts([...products,...parseReceiptText(text2)]);
+  }
+  setOcrProg(94,'Pulizia risultati...');
+  return products;
+}
+function normalizeOcrLine(line){return String(line||'').replace(/\u00a0/g,' ').replace(/[|¦]/g,'l').replace(/[“”]/g,'"').replace(/[‘’`]/g,"'").replace(/\s+/g,' ').trim();}
+function fixOcrWord(word){return String(word||'').replace(/0/g,'o').replace(/5/g,'s').replace(/1/g,'l').replace(/[¢©]/g,'c');}
+function titleCaseName(s){return String(s||'').split(' ').filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');}
+function mergeScannedProducts(list){
+  const out=new Map();
+  for(const p of list){
+    if(!p||!p.name)continue;
+    const key=p.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+    if(!key||out.has(key))continue;
+    out.set(key,{...p,selected:true,tempId:p.tempId||uid()});
+  }
+  return [...out.values()];
+}
+function parseReceiptText(text){
+  const rawLines=String(text||'').split(/\n+/).map(normalizeOcrLine).filter(Boolean);
+  const skipLine=[
+    /^(totale|subtotale|tot\.?|sconto|iva|imponibile|pagato|resto|cassa|scontrino|data|ora|p\.?iva|partita|fiscale|codice|tel|fax|euro|eur|www|\.it|grazie|arrivederci|punti|carta|bancomat|contanti|pagamento|ticket|cliente|operatore|negozio|reparto)\b/i,
+    /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/,
+    /^\d{1,2}:\d{2}/,
+    /^[*\-=_#\s]+$/,
+    /^\d+[\.,]\d{2}\s*[A-Z€]?$/,
+    /^(file|modifica|visualizza|settings|offline|feedback|search|github|pages|script|prima|analisi)\b/i
+  ];
+  const blacklist=new Set(['file','modifica','visualizza','offline','prodotti','script','search','feedback','github','pages','settings','prima','analisi','h1','main','production','connect']);
+  const products=[];
+  for(const raw of rawLines){
+    if(skipLine.some(r=>r.test(raw)))continue;
+    // Rimuove importi/prezzi/codici a fine riga, ma conserva il nome prodotto.
+    let line=raw
+      .replace(/\s+[€]?\s*\d+[\.,]\d{2}\s*[A-Z]?\s*$/i,'')
+      .replace(/\s+\d{5,}\s*$/,'')
+      .replace(/\s+\d+[\.,]\d{3}\s*(kg|g|lt|l|ml)\b/ig,'')
+      .trim();
+    const qtyMatch=line.match(/^\s*(\d{1,2})\s*(?:x|×)?\s+/i);
+    const qty=qtyMatch?Math.max(1,Math.min(99,parseInt(qtyMatch[1],10)||1)):1;
+    line=line
+      .replace(/^\s*\d{1,2}\s*(?:x|×)?\s+/i,'')
+      .replace(/^[^A-Za-zÀ-ÿ]+/,'')
+      .replace(/[^A-Za-zÀ-ÿ0-9\s'’\-]/g,' ')
+      .replace(/\s{2,}/g,' ')
+      .trim();
+    if(!line)continue;
+    let words=line.split(' ').map(fixOcrWord).filter(Boolean);
+    if(words.length>5)continue;
+    const lower=words.map(w=>w.toLowerCase());
+    if(lower.some(w=>blacklist.has(w)))continue;
+    const single=words.filter(w=>w.length<=1).length;
+    const avg=words.reduce((a,w)=>a+w.length,0)/Math.max(1,words.length);
+    if(single>1)continue;
+    if(words.length>=4&&avg<3)continue;
+    const name=words.join(' ').trim();
+    const letters=(name.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
+    if(letters<3||name.length<3||name.length>34)continue;
+    if(letters/Math.max(1,name.length)<0.55)continue;
+    products.push({name:titleCaseName(name),category:guessCategory(name),qty,unit:'pz',selected:true,tempId:uid()});
+  }
+  return mergeScannedProducts(products);
+}
+function capFirst(s){return titleCaseName(s);}
+async function runClaudeOcr(b64){
+  setOcrProg(20,'Invio a GPT-4o...');
+  const resp=await fetch('https://api.openai.com/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
+    body:JSON.stringify({
+      model:'gpt-4o',
+      max_tokens:2000,
+      messages:[{role:'user',content:[
+        {type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64,detail:'high'}},
+        {type:'text',text:'Analizza questo scontrino italiano. Estrai SOLO le voci/prodotti acquistati. NON estrarre importi, prezzi, totali, date, iva, cassa, codici, intestazioni o testo dell\'interfaccia. Se una riga contiene prodotto + prezzo, metti solo il nome del prodotto. Rispondi ESCLUSIVAMENTE con un JSON array, zero testo aggiuntivo, zero markdown. Formato: [{"name":"nome prodotto senza prezzo","category":"frigo","qty":1,"unit":"pz"}]. Categorie: frigo=latticini/carne/pesce/verdura fresca/salumi/uova, dispensa=pasta/riso/scatolame/olio/bevande/snack/dolci, altro=detersivi/igiene/varie.'}
+      ]}]
+    })
+  });
+  setOcrProg(80,'Elaborazione...');
+  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
+  const data=await resp.json();
+  const text=data.choices?.[0]?.message?.content||'';
+  rawOcrText=text;
+  try{return JSON.parse(text.replace(/```json|```/g,'').trim()).map(p=>({...p,selected:true,tempId:uid()}));}
+  catch{throw new Error('Risposta non valida da GPT-4o');}
+}
+function showScannedResults(){document.getElementById('ocr-loading').style.display='none';document.getElementById('ocr-count').textContent=`${cfg.ocrMode==='tesseract'?'🔒 Offline':'☁️ GPT-4o'} — ${scannedProducts.length} prodotti:`;const listEl=document.getElementById('scanned-items-list');if(!scannedProducts.length){listEl.innerHTML=`<div style="color:var(--text2);text-align:center;padding:14px">Nessun prodotto. Riprova con foto più nitida.</div>`;}else{listEl.innerHTML=scannedProducts.map((p,i)=>`<div class="scanned-item"><input type="checkbox" ${p.selected?'checked':''} onchange="scannedProducts[${i}].selected=this.checked"><span class="scanned-item-name">${esc(p.name)}${p.qty>1?' ×'+p.qty:''}</span><select onchange="scannedProducts[${i}].category=this.value"><option value="dispensa" ${p.category==='dispensa'?'selected':''}>🧺</option><option value="frigo" ${p.category==='frigo'?'selected':''}>❄️</option><option value="altro" ${p.category==='altro'?'selected':''}>📦</option></select></div>`).join('');}document.getElementById('raw-box').textContent=rawOcrText||'(nessun testo)';document.getElementById('ocr-results').style.display='block';}
+function toggleRaw(){const b=document.getElementById('raw-box');b.style.display=b.style.display==='none'?'block':'none';}
+async function addScannedProducts(){const toAdd=scannedProducts.filter(p=>p.selected);if(!toAdd.length){toast('⚠️ Seleziona almeno un prodotto');return;}for(const p of toAdd){const item={id:uid(),name:p.name,category:p.category,qty:p.qty||1,unit:p.unit||'pz',expiry:null,confirmed:false,originCategory:p.category,addedAt:Date.now()};state.cart.push(item);await pushItem('cart',item);}closeCamera();switchTop('carrello');updateBadges();toast(`🛒 ${toAdd.length} prodotti nel carrello`);}
+function retakePicture(){document.getElementById('ocr-results').style.display='none';document.getElementById('photo-preview').style.display='none';scannedProducts=[];rawOcrText='';openCamera();}
+function stopStream(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
+function closeCamera(){stopStream();closeModal('modal-camera');}
+function saveApiKeyAndContinue(){const key=document.getElementById('api-key-input').value.trim();if(!key||!key.startsWith('sk-')){toast('⚠️ API key non valida');return;}cfg.apiKey=key;saveLocal();document.getElementById('api-key-prompt').style.display='none';document.getElementById('camera-container').style.display='block';startCamera();}
+
+// ═══════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════
+function openSettings(){document.getElementById('settings-api-key').value=cfg.apiKey||'';openModal('modal-settings');}
+function saveSettings(){cfg.apiKey=document.getElementById('settings-api-key').value.trim();saveLocal();closeModal('modal-settings');toast('✅ Salvato');}
+function confirmClearData(){if(!confirm('Cancellare TUTTI i dati locali?'))return;state.products=[];state.shoppingList=[];state.cart=[];saveLocal();closeModal('modal-settings');renderMain();updateBadges();updateExpiryAlert();toast('🗑 Dati cancellati');}
+function clearSearch(){const i=document.getElementById('search-global');if(i)i.value='';renderMain();}
+
+// ═══════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);}));
+
+// ═══════════════════════════════════════════
+//  PWA
+// ═══════════════════════════════════════════
+function injectManifest(){}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+function init(){
+  loadLocal();initNav();
+  setOcrMode(cfg.ocrMode||'tesseract');
+  document.getElementById('btn-scan').addEventListener('click',openCamera);
+  document.getElementById('btn-settings').addEventListener('click',openSettings);
+  document.getElementById('btn-family').addEventListener('click',()=>{document.getElementById('family-code-display').textContent=cfg.familyCode||'—';openModal('modal-family');});
+  document.getElementById('fab').addEventListener('click',()=>{if(topTab==='spesa')addToSpesaManual();else if(topTab==='carrello')addToCarrelloChoice();else openAdd();});
+  setTimeout(()=>{
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(()=>{
+      document.getElementById('splash').style.display='none';
+      if(!cfg.sbUrl||!cfg.sbKey){openModal('modal-supabase');}
+      if(!cfg.familyCode){document.getElementById('setup-screen').classList.remove('hidden');}
+      else{startApp();}
+    },500);
+  },900);
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('/SchrodinFridge/sw.js')
+      .then(r=>console.log('SW OK',r.scope))
+      .catch(e=>console.log('SW err',e));
+  });
+}
+</script>
+</body>
+</html>
