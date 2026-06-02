@@ -1,28 +1,14 @@
-try{if('scrollRestoration' in history)history.scrollRestoration='manual';}catch(e){}
 'use strict';
-    const APP_VERSION='step20w-sync-access-diagnostics-2026-06-02-01';
+    const APP_VERSION='step20w-home-copy-list-readable-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
     let cfg={familyCode:'',supabaseUrl:DEFAULT_SUPABASE_URL,supabaseKey:DEFAULT_SUPABASE_KEY,offline:false};
     let state=emptyState(), view='home', sb=null, channel=null, lastError='', searchText='', cartSearch='', houseSearch='';
     let selectedCart=new Set(), selectedHouse=new Set(), pendingCategoryAction=null, editingKind=null, editingId=null;
-    let selectedMood='', mealIdeas=[], pendingMealOptions=[], mealAiMode='', savedMeal=null;
-    let localMutationStamp=0, syncRunning=false, searchRenderTimer=null, realtimeDebounce=null;
+    let selectedMood='', mealIdeas=[], pendingMealOptions=[], mealAiMode='';
+    let localMutationStamp=0, syncRunning=false, searchRenderTimer=null;
 
-    
-    function hardScrollTop(){
-      try{
-        if('scrollRestoration' in history) history.scrollRestoration='manual';
-        requestAnimationFrame(()=>{
-          window.scrollTo(0,0);
-          document.documentElement.scrollTop=0;
-          document.body.scrollTop=0;
-          const appEl=document.getElementById('app');
-          if(appEl) appEl.scrollTop=0;
-        });
-      }catch(e){}
-    }
     function emptyState(){return{products:[],shoppingList:[],cart:[]};}
     function normalizeState(){if(!state||typeof state!=='object')state=emptyState(); if(!Array.isArray(state.products))state.products=[]; if(!Array.isArray(state.shoppingList))state.shoppingList=[]; if(!Array.isArray(state.cart))state.cart=[]; ['products','shoppingList','cart'].forEach(k=>state[k]=state[k].map(normalizeItem)); return state;}
     function normalizeItem(x){x=x&&typeof x==='object'?x:{}; return {id:String(x.id||newId()),family_code:normalizeFamilyCode(x.family_code||cfg.familyCode),list_type:x.list_type||'product',name:String(x.name||'').trim(),category:normalizeCategory(x.category),qty:Number(x.qty||1),unit:String(x.unit||'pz'),notes:String(x.notes||''),checked:!!x.checked,confirmed:!!x.confirmed,origin_category:normalizeCategory(x.origin_category||x.category),added_at:Number(x.added_at||Date.now()),checked_at:x.checked_at?Number(x.checked_at):null,updated_at:Number(x.updated_at||Date.now()),expiry:x.expiry||null};}
@@ -66,7 +52,7 @@ try{if('scrollRestoration' in history)history.scrollRestoration='manual';}catch(
     function createFamily(){const code='FAM-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();document.getElementById('join-code').value=code;enterFamily(code);toast('Nuova famiglia creata: '+code);}
     function changeFamily(){closeAllModals();resetRealtime();cfg.familyCode='';cfg.offline=false;state=emptyState();saveConfig();showSetup();}
     function logoutFamily(){changeFamily();toast('Sei uscito dalla famiglia');}
-    function setView(next){view=next;searchText='';cartSearch='';houseSearch='';selectedCart.clear();selectedHouse.clear();hardScrollTop();render();}
+    function setView(next){view=next;searchText='';cartSearch='';houseSearch='';selectedCart.clear();selectedHouse.clear();render();}
 
     
     function updateNavBadges(){
@@ -99,7 +85,7 @@ try{if('scrollRestoration' in history)history.scrollRestoration='manual';}catch(
 
 function render(){normalizeState();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));const page=document.getElementById('page');
       page.innerHTML=view==='home'?renderHome():view==='frigo'?renderStorage('frigo'):view==='dispensa'?renderStorage('dispensa'):view==='altro'?renderStorage('altro'):view==='shopping'?renderShopping():view==='cart'?renderCart():view==='house'?renderHouse('all'):view==='expiring'?renderHouse('expiring'):view==='expired'?renderHouse('expired'):view==='terminated'?renderHouse('terminated'):renderHome();
-      document.getElementById('fab').style.display=['home','house','expiring','expired','terminated'].includes(view)?'none':'grid'; if(typeof updateNavBadges==='function')updateNavBadges(); renderDebug(); setSyncStatus(lastError?'error':cfg.offline?'offline':sb?'online':'config'); hardScrollTop(); }
+      document.getElementById('fab').style.display=['home','house','expiring','expired','terminated'].includes(view)?'none':'grid'; if(typeof updateNavBadges==='function')updateNavBadges(); renderDebug(); setSyncStatus(lastError?'error':cfg.offline?'offline':sb?'online':'config'); }
 
     function activeProducts(){return state.products.filter(x=>!x.checked&&!isExpired(x));}
     function terminatedProducts(){return state.products.filter(x=>!!x.checked);}
@@ -119,24 +105,15 @@ function shoppingStats(){return {open:countOpen(state.shoppingList), done:state.
 function cartStats(){return {open:countOpen(state.cart), done:state.cart.filter(x=>x.checked).length};}
 function renderCategoryTile(cat,title,subtitle){const st=catStats(cat);return `<button class="tile" onclick="setView('${cat}')"><img src="${iconFor(cat)}" class="tile-icon" alt="${title}"><h3>${title}</h3><p class="muted">${subtitle}</p><div class="tile-stats">${statLine('articoli presenti',st.presenti)}${statLine('articoli terminati',st.terminati)}${statLine('in scadenza / scaduti',st.expiring+' / '+st.expired)}</div></button>`;}
 function renderQuickAction(viewName, iconPath, title, subtitle, count, badgeId){return `<button class="quick-btn" onclick="setView('${viewName}')"><img src="${iconPath}" class="quick-icon" alt="${title}"><div><b>${title}</b><div class="quick-meta">${subtitle}</div></div><span id="${badgeId}" class="quick-badge ${count>0?'show':''}">${count}</span></button>`;}
-function renderHome(){const house=activeProducts().length,terminated=terminatedProducts().length,exp=expiringProducts().length,expired=expiredProducts().length,cart=cartStats().open,list=shoppingStats().open;return `<div class="top"><div><h2>Ciao, Freddie! 👋</h2><div class="muted">Famiglia: <b>${esc(cfg.familyCode||'offline')}</b> · <span class="sync">...</span><br><span class="version-pill">Step 20W sync</span></div></div><div class="top-actions"><button class="icon-btn" onclick="openSettings()" title="Impostazioni">⚙️</button><button class="icon-btn logout-top" onclick="logoutFamily()" title="Esci dalla famiglia">🚪</button></div></div><section class="hero"><small>Panoramica oggi</small><h3>Gestione famiglia</h3><div class="metrics"><div class="metric"><button onclick="setView('house')"><b>${house}</b><span>In casa</span></button></div><div class="metric"><button onclick="setView('terminated')"><b>${terminated}</b><span>Articoli terminati</span></button></div><div class="metric"><button onclick="setView('expiring')"><b>${exp}</b><span>In scadenza</span></button></div><div class="metric"><button onclick="setView('expired')"><b>${expired}</b><span>Scaduti</span></button></div></div></section><div class="home-quick">${renderQuickAction('shopping','ui-lista-cat.png','Lista spesa','Da acquistare',list,'badge-shopping-home')}${renderQuickAction('cart','ui-carrello-cat.png','Lista carrello','Da sistemare',cart,'badge-cart-home')}</div><div class="mascot-card"><div><small>Schrodinger Fridge</small><h3>Controlla cosa hai, prima di comprare</h3><p class="muted" style="color:#EDE7F8">Tieni sotto controllo scorte, scadenze e lista della spesa di famiglia.</p></div><div class="mascot-stage"><img src="ui-home-cat.png" class="cat-loop" alt="Gatto animato"></div></div><div class="home-actions-ai"><button class="scan-card" type="button" onclick="openReceiptScan()"><b>Scansione scontrino</b><br><span>Foto + AI: articoli direttamente nel carrello</span></button><button class="meal-card" type="button" onclick="openMealAI()"><span class="meal-icon-wrap"><img src="ui-chef-ai-cat.png" class="meal-icon" alt="Chef AI"></span><span class="meal-copy"><b>Chef AI di casa</b><br><span>3 idee pasto usando frigo, dispensa e scadenze</span></span></button></div>${renderSavedMealBanner()}<div class="grid home-grid">${renderCategoryTile('frigo','Frigo','Prodotti da consumare')}${renderCategoryTile('dispensa','Dispensa','Scorte di casa')}${renderCategoryTile('altro','Altro','Prodotti vari')}</div>`;}
-        
-function renderSavedMealBanner(){
-      if(typeof savedMeal==='undefined'||!savedMeal)return '';
-      const used=(savedMeal.used||[]).filter(Boolean).slice(0,4).join(' · ');
-      const steps=(savedMeal.steps||[]).filter(Boolean).slice(0,2).join(' · ');
-      return `<div class="saved-meal-banner"><div><small>Ricetta salvata</small><h3>${esc(savedMeal.title||'Ricetta consigliata')}</h3><p>${esc(used||steps||savedMeal.why||'Pronta da preparare')}</p></div><button class="icon-btn saved-close" title="Cancella ricetta salvata" onclick="clearSavedMeal()">×</button></div>`;
+function renderHome(){
+      const house=activeProducts().length,terminated=terminatedProducts().length,exp=expiringProducts().length,expired=expiredProducts().length,cart=cartStats().open,list=shoppingStats().open;
+      return `<div class="top"><div><div class="muted">Famiglia: <b>${esc(cfg.familyCode||'offline')}</b> · <span class="sync">...</span></div></div><div class="top-actions"><button class="icon-btn" onclick="openSettings()" title="Impostazioni">⚙️</button><button class="icon-btn logout-top" onclick="logoutFamily()" title="Esci dalla famiglia">🚪</button></div></div>
+      <div class="mascot-card sch-banner"><div><small>Schrodinger Fridge</small><h3>Ciao, Umano! 👋</h3><p class="muted" style="color:#EDE7F8">Finché non apri il frigo, è contemporaneamente pieno o vuoto: usa il gatto di Schrödinger per tracciare le tue riserve e sapere sempre cosa hai davvero in casa.</p></div><div class="mascot-stage"><img src="ui-home-cat.png" class="cat-loop" alt="Gatto animato"></div></div>
+      <section class="hero"><small>Panoramica oggi</small><h3>Gestione famiglia</h3><div class="metrics"><div class="metric"><button onclick="setView('house')"><b>${house}</b><span>In casa</span></button></div><div class="metric"><button onclick="setView('terminated')"><b>${terminated}</b><span>Articoli terminati</span></button></div><div class="metric"><button onclick="setView('expiring')"><b>${exp}</b><span>In scadenza</span></button></div><div class="metric"><button onclick="setView('expired')"><b>${expired}</b><span>Scaduti</span></button></div></div></section>
+      <div class="home-quick">${renderQuickAction('shopping','ui-lista-cat.png','Lista spesa','Da acquistare',list,'badge-shopping-home')}${renderQuickAction('cart','ui-carrello-cat.png','Lista carrello','Da sistemare',cart,'badge-cart-home')}</div><div class="home-actions-ai"><button class="scan-card" type="button"><b>Scansione scontrino</b><br><span>Fotocamera + AI Vision</span></button><button class="meal-card" type="button" onclick="openMealAI()"><span class="meal-icon-wrap"><img src="ui-chef-ai-cat.png" class="meal-icon" alt="Chef AI"></span><span class="meal-copy"><b>Chef AI di casa</b><br><span>3 idee pasto usando frigo, dispensa e scadenze</span></span></button></div><div class="grid home-grid">${renderCategoryTile('frigo','Frigo','Prodotti da consumare')}${renderCategoryTile('dispensa','Dispensa','Scorte di casa')}${renderCategoryTile('altro','Altro','Prodotti vari')}</div>`;
     }
-    function saveMealIdea(i){
-      const m=mealIdeas[i];
-      if(!m)return toast('Ricetta non trovata');
-      savedMeal=JSON.parse(JSON.stringify(m));
-      closeAllModals();
-      render();
-      toast('Ricetta salvata in home');
-    }
-    function clearSavedMeal(){savedMeal=null;render();toast('Ricetta rimossa');}
-    function renderStorage(cat){let items=orderProducts(state.products.filter(x=>x.category===cat));const title=cat==='frigo'?'Frigorifero':cat==='dispensa'?'Dispensa':'Altro';return `<div class="top"><div class="brand"><img src="brand-icon.png" alt=""><h1>${title}</h1></div><span class="sync">...</span></div><input id="search-storage" class="input search" placeholder="Cerca in ${title.toLowerCase()}" value="${esc(searchText)}" oninput="handleSearchInput('search-storage','searchText')">${renderDuplicateAlert(items)}${renderSections(items,'product',cat)}`;}
+
+function renderStorage(cat){let items=orderProducts(state.products.filter(x=>x.category===cat));const title=cat==='frigo'?'Frigorifero':cat==='dispensa'?'Dispensa':'Altro';return `<div class="top"><div class="brand"><img src="brand-icon.png" alt=""><h1>${title}</h1></div><span class="sync">...</span></div><input id="search-storage" class="input search" placeholder="Cerca in ${title.toLowerCase()}" value="${esc(searchText)}" oninput="handleSearchInput('search-storage','searchText')">${renderDuplicateAlert(items)}${renderSections(items,'product',cat)}`;}
     function renderNoResults(q,list,cat,label){q=String(q||'').trim();const safe=esc(q);if(q)return `<div class="empty">Nessuna voce trovata.<br><button class="add-link" onclick="openAddModal('${safe}','${list}','${cat||'dispensa'}')">Aggiungi “${safe}”</button></div>`;return `<div class="empty">${label||'Nessuna voce.'} Premi + per aggiungere.</div>`;}
     function renderSections(source,kind,cat){let items=[...source];const q=searchText.trim().toLowerCase();if(q)items=items.filter(x=>itemText(x).includes(q));if(!items.length)return renderNoResults(searchText,'product',cat,'Nessuna voce');const exp=items.filter(isExpiring);const expired=items.filter(isExpired);const done=items.filter(x=>x.checked);const good=items.filter(x=>!x.checked&&!isExpiring(x)&&!isExpired(x));return `${exp.length?`<div class="section-title">In scadenza</div>${exp.map(x=>renderProductItem(x)).join('')}`:''}${good.length?`<div class="section-title">Articolo presente</div>${good.map(x=>renderProductItem(x)).join('')}`:''}${done.length?`<div class="section-title">Terminati</div>${done.map(x=>renderProductItem(x)).join('')}`:''}${expired.length?`<div class="section-title">Scaduti</div>${expired.map(x=>renderProductItem(x)).join('')}`:''}`;}
     function statusHtml(it){if(it.checked)return '<span class="status-tag done">terminato</span>';if(isExpired(it))return '<span class="status-tag expired">scaduto</span>';if(isExpiring(it)){const d=daysToExpiry(it);const label=d===0?'oggi':d===1?'1 giorno':d+' giorni';return `<span class="status-tag expiring">in scadenza · ${label}</span>`;}return '';}
@@ -215,19 +192,6 @@ function renderSavedMealBanner(){
         .replace(/\s+/g,' ')
         .trim();
     }
-    
-    function inferCategoryFromName(name){
-      const s=normalizeName(name);
-      if(['latte','yogurt','formaggio','mozzarella','ricotta','prosciutto','salame','mortadella','speck','uova','carne','pollo','pesce','insalata','verdura','frutta'].some(k=>s.includes(k)))return 'frigo';
-      if(['detersivo','sapone','shampoo','carta','scottex','spugna','dentifricio'].some(k=>s.includes(k)))return 'altro';
-      return 'dispensa';
-    }
-    function sameProductName(a,b){
-      const x=normalizeName(a), y=normalizeName(b);
-      if(!x||!y)return false;
-      return x===y || x.includes(y) || y.includes(x);
-    }
-
     function itemIconEmoji(name){
       const s=normalizeName(name);
       const rules=[
@@ -307,7 +271,7 @@ function openMealAI(){
       const box=document.getElementById('meal-result');
       if(!selectedMood)return toast('Scegli prima una faccina');
       mealAiMode='loading';
-      box.innerHTML='<div class="empty">Chef AI sta contattando Gemini tramite Supabase...</div>';
+      box.innerHTML='<div class="empty">Chef AI sta provando a collegarsi alla funzione Supabase...</div>';
       try{
         const ideas=await fetchMealIdeas();
         if(Array.isArray(ideas)&&ideas.length){
@@ -321,8 +285,6 @@ function openMealAI(){
         console.warn('AI pasti fallback locale', e);
         mealAiMode='locale';
         mealIdeas=normalizeMealIdeas(localMealIdeas());
-        const errBox=document.getElementById('meal-ai-error');
-        if(errBox) errBox.textContent=String(e&&e.message?e.message:e).slice(0,180);
       }
       renderMealIdeas();
     }
@@ -331,11 +293,7 @@ function openMealAI(){
       const key=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;
       const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':key,'Authorization':'Bearer '+key},body:JSON.stringify(mealInventory())});
       const text=await res.text();
-      if(!res.ok){
-        let msg=text||'AI non disponibile';
-        try{const j=JSON.parse(text); msg=j.error||j.message||JSON.stringify(j).slice(0,220);}catch(_){}
-        throw new Error('Funzione AI: '+msg);
-      }
+      if(!res.ok)throw new Error(text||'AI non disponibile');
       const data=JSON.parse(text||'{}');
       return data.meals||data.ideas||[];
     }
@@ -484,8 +442,8 @@ function openMealAI(){
       if(!mealIdeas.length){box.innerHTML='<div class="empty">Non ho trovato proposte. Prova un altro umore o aggiungi più prodotti.</div>';return;}
       const mode=mealAiMode==='ai'
         ? '<div class="meal-ai-status ai">Gemini AI collegata: proposte generate online</div>'
-        : '<div class="meal-ai-status local">Modalità locale: Gemini non collegata o non disponibile</div><div id="meal-ai-error" class="meal-ai-error"></div>';
-      box.innerHTML=mode+mealIdeas.map((m,i)=>`<article class="meal-idea"><div class="meal-head"><b>${i+1}. ${esc(m.title||'Pasto consigliato')}</b><span>${esc(selectedMood)}</span></div><p>${esc(m.why||'Proposta basata sugli articoli disponibili.')}</p>${(m.used&&m.used.length)?`<div class="meal-line"><b>Usa:</b> ${m.used.map(esc).join(', ')}</div>`:''}${(m.missing_groups&&m.missing_groups.length)?`<div class="meal-line"><b>Da aggiungere:</b> ${m.missing_groups.map(g=>esc(g.label||g.options.join(' / '))).join('; ')} <button class="add-link" onclick="openMealMissingChooser(${i})">Scegli cosa aggiungere</button></div>`:''}${(m.steps&&m.steps.length)?`<ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}<div class="meal-actions"><button class="secondary" type="button" onclick="saveMealIdea(${i})">Salva ricetta</button></div></article>`).join('');
+        : '<div class="meal-ai-status local">Modalità locale: Gemini non collegata o non disponibile</div>';
+      box.innerHTML=mode+mealIdeas.map((m,i)=>`<article class="meal-idea"><div class="meal-head"><b>${i+1}. ${esc(m.title||'Pasto consigliato')}</b><span>${esc(selectedMood)}</span></div><p>${esc(m.why||'Proposta basata sugli articoli disponibili.')}</p>${(m.used&&m.used.length)?`<div class="meal-line"><b>Usa:</b> ${m.used.map(esc).join(', ')}</div>`:''}${(m.missing_groups&&m.missing_groups.length)?`<div class="meal-line"><b>Da aggiungere:</b> ${m.missing_groups.map(g=>esc(g.label||g.options.join(' / '))).join('; ')} <button class="add-link" onclick="openMealMissingChooser(${i})">Scegli cosa aggiungere</button></div>`:''}${(m.steps&&m.steps.length)?`<ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}</article>`).join('');
     }
     function openMealMissingChooser(i){
       const m=mealIdeas[i];
@@ -513,130 +471,14 @@ function openMealAI(){
       render();
       toast('Ingredienti aggiunti alla lista spesa');
     }
-
-
-function receiptProgressHtml(percent,label){
-      return `<div class="receipt-progress"><div class="receipt-progress-top"><b>${percent}%</b><span>${esc(label)}</span></div><div class="receipt-bar"><i style="width:${percent}%"></i></div></div>`;
-    }
-    function setReceiptProgress(percent,label){
-      const box=document.getElementById('receipt-result');
-      if(box) box.innerHTML=receiptProgressHtml(percent,label);
-    }
-    function startReceiptProgress(){
-      let p=8;
-      setReceiptProgress(p,'Preparazione immagine...');
-      const steps=[
-        [18,'Compressione e caricamento foto...'],
-        [32,'Invio alla funzione Supabase...'],
-        [48,'Gemini sta leggendo lo scontrino...'],
-        [63,'Estrazione articoli acquistati...'],
-        [78,'Confronto con Lista spesa...'],
-        [88,'Preparazione import nel carrello...']
-      ];
-      let i=0;
-      const timer=setInterval(()=>{
-        if(i<steps.length){p=steps[i][0];setReceiptProgress(p,steps[i][1]);i++;}
-      },900);
-      return {stop(){clearInterval(timer);},done(label='Completato'){clearInterval(timer);setReceiptProgress(100,label);}};
-    }
-    function openReceiptScan(){
-      closeAllModals();
-      const file=document.getElementById('receipt-file');
-      if(file)file.value='';
-      const box=document.getElementById('receipt-result');
-      if(box)box.innerHTML='<div class="empty">Carica o scatta la foto dello scontrino. L’AI riconoscerà solo gli articoli e li importerà nel carrello.</div>';
-      document.getElementById('modal-receipt').classList.add('open');
-    }
-    function fileToBase64(file){
-      return new Promise((resolve,reject)=>{
-        const reader=new FileReader();
-        reader.onload=()=>resolve(String(reader.result||''));
-        reader.onerror=reject;
-        reader.readAsDataURL(file);
-      });
-    }
-    async function scanReceipt(){
-      const input=document.getElementById('receipt-file');
-      const file=input&&input.files&&input.files[0];
-      if(!file)return toast('Carica una foto dello scontrino');
-      const progress=startReceiptProgress();
-      try{
-        const image=await fileToBase64(file);
-        setReceiptProgress(26,'Foto pronta, invio a Gemini...');
-        const url=(cfg.supabaseUrl||DEFAULT_SUPABASE_URL).replace(/\/+$/,'')+'/functions/v1/receipt-vision';
-        const key=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;
-        setReceiptProgress(42,'Richiesta in corso...');
-        const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':key,'Authorization':'Bearer '+key},body:JSON.stringify({image,shopping:state.shoppingList.map(x=>({id:x.id,name:x.name,qty:x.qty,unit:x.unit,category:x.category}))})});
-        setReceiptProgress(72,'Risposta ricevuta, analisi articoli...');
-        const text=await res.text();
-        if(!res.ok){
-          let msg=text||'Errore scansione';
-          try{const j=JSON.parse(text); msg=j.error||j.message||JSON.stringify(j).slice(0,180);}catch(_){}
-          throw new Error(msg);
-        }
-        const data=JSON.parse(text||'{}');
-        const products=Array.isArray(data.products)?data.products:[];
-        if(!products.length){
-          progress.stop();
-          document.getElementById('receipt-result').innerHTML='<div class="empty">Nessun articolo riconosciuto. Prova una foto più nitida.</div>';
-          return;
-        }
-        setReceiptProgress(90,'Importazione nel carrello...');
-        await importReceiptProducts(products);
-        progress.done('Articoli importati');
-        setTimeout(()=>{
-          const box=document.getElementById('receipt-result');
-          if(box)box.innerHTML=`<div class="meal-ai-status ai">Importati ${products.length} articoli nel carrello</div><div class="receipt-list">${products.map(p=>`<div>${esc(p.name||'voce')} · ${esc(String(p.qty||1))} ${esc(p.unit||'pz')}</div>`).join('')}</div>`;
-        },350);
-      }catch(e){
-        progress.stop();
-        console.warn('Errore scansione scontrino',e);
-        const box=document.getElementById('receipt-result');
-        if(box)box.innerHTML=`<div class="meal-ai-status local">Scansione non riuscita: ${esc(String(e&&e.message?e.message:e).slice(0,180))}</div>`;
-      }
-    }
-    async function importReceiptProducts(products){
-      const imported=[];
-      for(const p of products){
-        const name=String(p.name||'').trim();
-        if(!name)continue;
-        const match=state.shoppingList.find(x=>sameProductName(x.name,name));
-        let item;
-        if(match){
-          item=findRemove('shopping',match.id);
-          item.list_type='cart';
-          item.name=name||item.name;
-          item.qty=Number(p.qty||item.qty||1);
-          item.unit=String(p.unit||item.unit||'pz');
-          item.category=normalizeCategory(p.category||item.category||inferCategoryFromName(name));
-          item.updated_at=Date.now();
-        }else{
-          item=normalizeItem({id:newId('cart'),family_code:cfg.familyCode,list_type:'cart',name,category:normalizeCategory(p.category||inferCategoryFromName(name)),qty:Number(p.qty||1),unit:String(p.unit||'pz'),notes:'da scontrino',checked:false,added_at:Date.now(),updated_at:Date.now()});
-        }
-        state.cart.unshift(item);
-        imported.push(item);
-        await upsertOne(item);
-      }
-      saveLocal();
-      render();
-      if(typeof updateNavBadges==='function')updateNavBadges();
-      toast(`${imported.length} articoli nel carrello`);
-    }
-    function openSettings(){document.getElementById('supabase-url').value=cfg.supabaseUrl||DEFAULT_SUPABASE_URL;document.getElementById('supabase-key').value=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;const f=document.getElementById('settings-family');if(f)f.textContent=cfg.familyCode||'offline';document.getElementById('modal-settings').classList.add('open');renderDebug();}
+function openSettings(){document.getElementById('supabase-url').value=cfg.supabaseUrl||DEFAULT_SUPABASE_URL;document.getElementById('supabase-key').value=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;const f=document.getElementById('settings-family');if(f)f.textContent=cfg.familyCode||'offline';document.getElementById('modal-settings').classList.add('open');renderDebug();}
     function saveSettings(){cfg.supabaseUrl=document.getElementById('supabase-url').value.trim()||DEFAULT_SUPABASE_URL;cfg.supabaseKey=document.getElementById('supabase-key').value.trim()||DEFAULT_SUPABASE_KEY;saveConfig();closeAllModals();initSupabase();fullSync();}
     
 
     function initSupabase(){
       resetRealtime();
-      if(cfg.offline){setSyncStatus('offline');return;}
-      if(!cfg.supabaseUrl||!cfg.supabaseKey){
-        setLastError('Supabase URL/key mancanti');
-        setSyncStatus('config');
-        return;
-      }
-      if(!window.supabase){
-        setLastError('Libreria Supabase non caricata dal CDN');
-        setSyncStatus('config');
+      if(cfg.offline||!cfg.supabaseUrl||!cfg.supabaseKey||!window.supabase){
+        setSyncStatus(cfg.offline?'offline':'config');
         return;
       }
       try{
@@ -646,24 +488,14 @@ function receiptProgressHtml(percent,label){
         setSyncStatus('online');
       }catch(e){setLastError(e);setSyncStatus('error');}
     }
-    function resetRealtime(){
-      if(realtimeDebounce){clearTimeout(realtimeDebounce);realtimeDebounce=null;}
-      if(channel&&sb)try{sb.removeChannel(channel)}catch{} channel=null;sb=null;
-    }
+    function resetRealtime(){if(channel&&sb)try{sb.removeChannel(channel)}catch{} channel=null;sb=null;}
     function subscribeRealtime(){
       if(!sb||!cfg.familyCode)return;
       channel=sb.channel('items-'+cfg.familyCode)
         .on('postgres_changes',{event:'*',schema:'public',table:'items'},payload=>{
           const row=payload.new||payload.old;
-          if(row&&normalizeFamilyCode(row.family_code)===cfg.familyCode){
-            if(realtimeDebounce)clearTimeout(realtimeDebounce);
-            realtimeDebounce=setTimeout(()=>fullSync(),650);
-          }
-        })
-        .subscribe((status)=>{
-          if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setLastError('Realtime Supabase: '+status);
-          renderDebug();
-        });
+          if(row&&normalizeFamilyCode(row.family_code)===cfg.familyCode)fullSync();
+        }).subscribe();
     }
     function rowFromItem(it){it=normalizeItem(it);return{id:it.id,family_code:cfg.familyCode,list_type:it.list_type,name:it.name,category:it.category,qty:Math.max(0,Math.round(Number(it.qty)||1)),unit:it.unit||'pz',notes:it.notes||'',checked:!!it.checked,confirmed:!!it.confirmed,origin_category:it.origin_category||it.category,added_at:it.added_at||Date.now(),checked_at:it.checked_at||null,updated_at:Date.now(),expiry:it.expiry||null};}
     function applyRows(rows){
@@ -671,29 +503,20 @@ function receiptProgressHtml(percent,label){
       (rows||[]).forEach(r=>{const it=normalizeItem(r); if(it.list_type==='shopping')state.shoppingList.push(it);else if(it.list_type==='cart')state.cart.push(it);else state.products.push(it);});
       saveLocal(false);render();
     }
-    async function fullSync(force=false){
+    async function fullSync(){
       normalizeState();
-      if(syncRunning)return;
       if(cfg.offline){setSyncStatus('offline');return;}
-      if(!cfg.familyCode){setSyncStatus('config');return;}
       if(!sb){initSupabase();}
       if(!sb){setSyncStatus('config');return;}
-      const started=Date.now();
-      syncRunning=true;
       setSyncStatus('sync');
       try{
         const {data,error}=await sb.from('items').select('*').ilike('family_code',cfg.familyCode).order('added_at',{ascending:false});
         if(error)throw error;
-        if(!force && localMutationStamp && localMutationStamp>started){
-          lastError='Sync remoto saltato: modifiche locali in corso, riprovo tra poco';
-          setTimeout(()=>fullSync(true),900);
-        }else{
-          applyRows(data||[]);
-          lastError='';
-        }
+        applyRows(data||[]);
+        lastError='';
         setSyncStatus('online');
       }catch(e){setLastError(e);setSyncStatus('error');}
-      finally{syncRunning=false;renderDebug();}
+      finally{renderDebug();}
     }
     async function upsertOne(item){
       if(cfg.offline)return;
@@ -725,42 +548,14 @@ function receiptProgressHtml(percent,label){
       try{
         const {data,error}=await sb.from('items').select('id,family_code,list_type,name').ilike('family_code',cfg.familyCode).limit(50);
         if(error)throw error;
-        toast(`Test lettura OK: ${(data||[]).length} righe`);
-        fullSync(true);
-      }catch(e){setLastError(e);toast('Errore test lettura');renderDebug();}
-    }
-    async function diagnoseSync(){
-      if(cfg.offline)return toast('Sei in modalità offline');
-      if(!cfg.familyCode)return toast('Codice famiglia mancante');
-      if(!sb){initSupabase();}
-      if(!sb)return toast('Supabase non configurato');
-      const id='diag-'+Date.now();
-      const row={id,family_code:cfg.familyCode,list_type:'shopping',name:'__diagnosi_sync__',category:'altro',qty:1,unit:'pz',notes:'test automatico',checked:false,confirmed:false,origin_category:'altro',added_at:Date.now(),checked_at:null,updated_at:Date.now(),expiry:null};
-      try{
-        setSyncStatus('sync');
-        let r=await sb.from('items').upsert(row,{onConflict:'id'});
-        if(r.error)throw new Error('WRITE: '+r.error.message);
-        r=await sb.from('items').select('id').eq('id',id).single();
-        if(r.error)throw new Error('READ BACK: '+r.error.message);
-        r=await sb.from('items').delete().eq('id',id);
-        if(r.error)throw new Error('DELETE: '+r.error.message);
-        lastError='';
-        setSyncStatus('online');
-        renderDebug();
-        toast('Diagnosi Supabase OK: lettura/scrittura/cancellazione');
-      }catch(e){
-        setLastError(e);
-        setSyncStatus('error');
-        renderDebug();
-        toast('Diagnosi Supabase fallita');
-      }
+        toast(`Test sync OK: ${(data||[]).length} righe`);
+        fullSync();
+      }catch(e){setLastError(e);toast('Errore test sync');}
     }
     function setSyncStatus(status){document.querySelectorAll('.sync').forEach(el=>{el.className='sync '+(status==='online'?'online':status==='error'?'error':'');el.textContent=status==='online'?'sincronizzato':status==='error'?'errore':status==='config'?'configura Supabase':status==='sync'?'sync...':status==='offline'?'offline':status;});}
     function renderDebug(){const box=document.getElementById('debug');if(!box)return;const key=cfg.supabaseKey?cfg.supabaseKey.slice(0,8)+'…'+cfg.supabaseKey.slice(-5):'MANCANTE';box.textContent=`VERSIONE: ${APP_VERSION}
 FAMIGLIA: ${cfg.familyCode||'offline'}
 SUPABASE URL: ${cfg.supabaseUrl}
 ANON KEY: ${key}
-SUPABASE CLIENT: ${sb?'attivo':'non attivo'}
-SYNC RUNNING: ${syncRunning?'sì':'no'}
 LOCAL products/shopping/cart: ${state.products.length}/${state.shoppingList.length}/${state.cart.length}
 ULTIMO ERRORE: ${lastError||'nessuno'}`;}
