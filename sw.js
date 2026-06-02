@@ -1,9 +1,10 @@
-const CACHE = 'dispensa-v14';
+const CACHE = 'dispensa-v15';
 const ASSETS = [
   '/SchrodinFridge/index.html',
   '/SchrodinFridge/manifest.json',
   '/SchrodinFridge/icon-192.png',
-  '/SchrodinFridge/icon-512.png'
+  '/SchrodinFridge/icon-512.png',
+  '/SchrodinFridge/brand-icon.png'
 ];
 
 self.addEventListener('install', e => {

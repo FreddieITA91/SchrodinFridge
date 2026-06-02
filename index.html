@@ -69,7 +69,7 @@ body::before{
 #splash.hide{opacity:0;pointer-events:none}
 .splash-icon,.setup-logo{
   width:116px;height:116px;border-radius:34px;
-  background:url('/SchrodinFridge/icon-192.png?v=14') center/contain no-repeat;
+  background:url('/SchrodinFridge/brand-icon.png?v=15') center/contain no-repeat;
   font-size:0;display:block;
   filter:drop-shadow(0 16px 24px rgba(124,106,245,.18));
   animation:floaty 1.8s ease-in-out infinite alternate;
@@ -130,7 +130,7 @@ header{
 }
 .app-title .brand-mark{
   width:34px;height:34px;border-radius:12px;
-  background:url('/SchrodinFridge/icon-192.png?v=14') center/cover no-repeat;
+  background:url('/SchrodinFridge/brand-icon.png?v=15') center/cover no-repeat;
   display:inline-flex;flex:0 0 auto;
 }
 .header-actions{display:flex;gap:7px}
@@ -490,6 +490,226 @@ nav{
 .home-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
 .home-stats .stat-card{text-align:center}.home-stats .stat-num{font-size:25px}
 
+
+/* v15 exact mockup layout */
+:root{
+  --bg:#fbfafc;
+  --surface:#ffffff;
+  --surface2:#f6f5fb;
+  --surface3:#f1eff8;
+  --text:#10102f;
+  --text2:#66647e;
+  --text3:#9b98b2;
+  --accent:#755AF4;
+  --accent2:#6C4FE8;
+  --navy:#11122f;
+  --shadow:0 14px 34px rgba(16,16,47,.08);
+  --shadow-sm:0 8px 20px rgba(16,16,47,.06);
+}
+body{background:#fbfafc;color:var(--text)}
+body::before{background:linear-gradient(180deg,#fbfafc,#f8f7fb)}
+#splash{
+  background:#fbfafc;
+  gap:0;
+  padding-top:0;
+}
+.splash-icon{
+  width:112px;height:112px;
+  background:url('/SchrodinFridge/brand-icon.png?v=15') center/contain no-repeat;
+  filter:none;
+  margin-bottom:24px;
+  animation:none;
+}
+.splash-title{
+  font-size:27px;
+  line-height:1;
+  margin-bottom:14px;
+  letter-spacing:-.055em;
+}
+.splash-sub{
+  color:var(--accent);
+  line-height:1.45;
+  text-align:center;
+  font-size:14px;
+  margin-bottom:76px;
+  max-width:230px;
+}
+.splash-sub::before{content:'Sai cosa hai. Eviti sprechi.\\A Risparmi di più.';white-space:pre;display:block}
+.splash-sub{font-size:0}
+.splash-sub::before{font-size:14px}
+.splash-sub::after{
+  content:'';
+  display:block;
+  width:76px;height:6px;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--accent) 0 44%,#e7e2ff 44% 100%);
+  margin:58px auto 0;
+}
+#splash .splash-title + .splash-sub{}
+#splash::after{
+  content:'Caricamento in corso...';
+  color:var(--accent);
+  font-size:11px;
+  position:fixed;
+  left:0;right:0;
+  bottom:82px;
+  text-align:center;
+}
+.setup-logo{
+  width:84px;height:84px;
+  background:url('/SchrodinFridge/brand-icon.png?v=15') center/contain no-repeat;
+  filter:none;
+}
+.setup-h{font-size:26px}
+header{
+  background:#fbfafc;
+  border-bottom:0;
+  padding:18px 16px 12px;
+  box-shadow:none;
+}
+.header-top{margin-bottom:14px}
+.app-title{
+  font-size:25px;
+  align-items:center;
+}
+.app-title .brand-mark{
+  width:42px;height:42px;
+  background:url('/SchrodinFridge/brand-icon.png?v=15') center/contain no-repeat;
+  border-radius:0;
+}
+.sync-badge{
+  background:#fff!important;
+  color:var(--text)!important;
+  border:1px solid rgba(16,16,47,.08)!important;
+  box-shadow:var(--shadow-sm);
+  padding:6px 10px;
+}
+.icon-btn{
+  background:#fff;border:1px solid rgba(16,16,47,.08);
+  box-shadow:var(--shadow-sm);
+  border-radius:18px;
+}
+.top-tabs{
+  background:transparent;
+  padding:0;
+  gap:8px;
+  overflow-x:auto;
+}
+.top-tab{
+  flex:0 0 auto;
+  padding:9px 14px;
+  border-radius:12px;
+  background:#f4f3f8;
+  color:#66647e;
+  font-size:12px;
+}
+.top-tab.active{
+  background:var(--navy);
+  color:#fff;
+}
+main{padding:12px 16px 100px}
+.home-hero{
+  background:transparent;
+  color:var(--text);
+  box-shadow:none;
+  padding:0;
+  margin:0 0 16px;
+}
+.home-hero h1{font-size:25px;margin:0 0 8px}
+.home-hero p{display:none}
+.home-kicker{font-size:12px;color:var(--text2);text-transform:none;letter-spacing:0}
+.hero-family{background:#fff;color:var(--text);border:1px solid rgba(16,16,47,.08);box-shadow:var(--shadow-sm)}
+.dashboard-overview{
+  background:var(--navy);
+  color:#fff;
+  border-radius:18px;
+  padding:18px 16px;
+  margin-bottom:16px;
+  box-shadow:0 14px 30px rgba(17,18,47,.18);
+}
+.dashboard-overview .overview-title{
+  font-size:12px;font-weight:800;color:rgba(255,255,255,.8);margin-bottom:16px;
+}
+.overview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.overview-item{padding:0 10px;text-align:center;border-left:1px solid rgba(255,255,255,.13)}
+.overview-item:first-child{border-left:0}
+.overview-num{font-family:'Fraunces',serif;font-size:28px;line-height:1;margin-bottom:8px}
+.overview-label{font-size:12px;line-height:1.25;color:rgba(255,255,255,.82)}
+.dashboard-grid{
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:14px;
+}
+.dash-card{
+  min-height:122px;
+  border-radius:18px;
+  padding:17px 15px;
+  box-shadow:var(--shadow-sm);
+}
+.dash-card span{
+  width:42px;height:42px;
+  border-radius:14px;
+  margin-bottom:8px;
+}
+.dash-card strong{font-size:16px}
+.scan-card{
+  border-radius:18px;
+  padding:18px 16px;
+  margin-bottom:16px;
+}
+.scan-card strong{font-size:17px}
+.scan-card small{font-size:13px}
+.search-bar{
+  border-radius:13px;
+  padding:12px;
+  box-shadow:none;
+  border:1px solid #e6e4ef;
+}
+.category-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:14px;
+}
+.category-title-row{display:flex;align-items:center;gap:10px}
+.category-logo{width:42px;height:42px;background:url('/SchrodinFridge/brand-icon.png?v=15') center/contain no-repeat}
+.category-title h1{font-family:'Fraunces',serif;font-size:26px;line-height:1}
+.category-title p{font-size:13px;color:var(--text2);margin-top:2px}
+.filter-btn{width:42px;height:42px;border-radius:14px;border:1px solid #e6e4ef;background:#fff;font-size:16px}
+.filter-chips{display:flex;gap:8px;overflow-x:auto;margin-bottom:18px}
+.filter-chip{
+  padding:9px 13px;border-radius:12px;border:1px solid #e6e4ef;background:#f5f4f8;color:var(--text2);
+  font-size:12px;font-weight:800;white-space:nowrap
+}
+.filter-chip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.product-item{
+  border-radius:15px;
+  padding:10px 10px;
+  gap:11px;
+  border:0;
+  box-shadow:0 8px 18px rgba(16,16,47,.07);
+}
+.product-thumb{
+  width:54px;height:54px;border-radius:14px;flex:0 0 auto;
+  background:#f3f1f7;display:flex;align-items:center;justify-content:center;font-size:26px;
+}
+.product-name{font-size:16px;margin-bottom:3px}
+.product-actions .small-btn{background:transparent;border:0;box-shadow:none}
+.section-title{margin:18px 0 10px;color:var(--text);letter-spacing:0;text-transform:none;font-size:14px}
+.section-title::after{display:none}
+nav{
+  background:#fff;
+  border:0;
+  box-shadow:0 -10px 30px rgba(16,16,47,.08);
+  border-radius:24px 24px 0 0;
+  padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+}
+.nav-item{font-size:11px;border-radius:14px}
+.nav-item.active{background:transparent;color:var(--navy)}
+.nav-item.active .nav-icon{
+  background:var(--navy);color:#fff;border-radius:9px;padding:5px;
+}
+
 </style>
 </head>
 <body>
@@ -766,9 +986,15 @@ let topTab='ricerca',botTab='dispensa';
 let supaReady=false,realtimeCh=null,syncQueue=[],familyJustChanged=false;
 let dateEditId=null,dateEditType=null;
 
-function loadLocal(){try{const r=localStorage.getItem(DB_KEY);if(r){const d=JSON.parse(r);cfg={...cfg,...d.cfg};state={...state,...d.state};}}catch(e){}}
-function saveLocal(){localStorage.setItem(DB_KEY,JSON.stringify({cfg,state}));}
+function loadLocal(){try{const r=localStorage.getItem(DB_KEY);if(r){const d=JSON.parse(r);cfg={...cfg,...(d.cfg||{})};state={...emptyState(),...(d.state||{})};}}catch(e){state=emptyState();}normalizeState();}
 function emptyState(){return{products:[],shoppingList:[],cart:[]};}
+function normalizeState(){
+  if(!state||typeof state!=='object')state=emptyState();
+  if(!Array.isArray(state.products))state.products=[];
+  if(!Array.isArray(state.shoppingList))state.shoppingList=[];
+  if(!Array.isArray(state.cart))state.cart=[];
+}
+function saveLocal(){normalizeState();localStorage.setItem(DB_KEY,JSON.stringify({cfg,state}));}
 function clearFamilyState(){
   state=emptyState();
   syncQueue=[];
@@ -913,6 +1139,7 @@ function applyRow(r){
 async function fullSync(){return syncSmart();}
 
 async function syncSmart(){
+  normalizeState();
   if(!cfg.sbUrl||!cfg.sbKey||!cfg.familyCode){setSyncStatus('offline');return;}
   try{
     setSyncStatus('syncing');
@@ -1118,6 +1345,7 @@ function updateBadges(){
 //  RENDER
 // ═══════════════════════════════════════════
 function renderMain(){
+  normalizeState();
   const el=document.getElementById('main-content');if(!el)return;
   if(topTab==='ricerca'){renderRicerca(el);return;}
   if(topTab==='spesa'){renderSpesa(el);return;}
@@ -1136,37 +1364,63 @@ function calBtnHtml(id,type,expiry){
 }
 
 function renderCategory(el,cat){
+  normalizeState();
   const items=state.products.filter(p=>p.category===cat);
   const active=items.filter(p=>!p.checked),done=items.filter(p=>p.checked);
-  let html=`<div class="stats-row">
-    <div class="stat-card"><div class="stat-num">${active.length}</div><div class="stat-label">Disponibili</div></div>
-    <div class="stat-card"><div class="stat-num">${done.length}</div><div class="stat-label">Finiti</div></div>
-  </div>`;
+  const title={frigo:'Frigo',dispensa:'Dispensa',altro:'Altro'}[cat]||cat;
+  const count=active.length;
+  const ph=cat==='frigo'?'Cerca nel frigo...':cat==='dispensa'?'Cerca in dispensa...':'Cerca...';
+  let html=`<section class="category-head">
+    <div class="category-title-row"><div class="category-logo"></div><div class="category-title"><h1>${title}</h1><p>${count} prodotti</p></div></div>
+    <button class="icon-btn">🔔</button>
+  </section>
+  <div class="search-bar"><span class="search-icon">🔍</span><input placeholder="${ph}" oninput="filterVisibleProducts(this.value)" autocomplete="off"><button class="filter-btn">≡</button></div>
+  <div class="filter-chips"><span class="filter-chip active">Tutti</span><span class="filter-chip">Latticini</span><span class="filter-chip">Carne</span><span class="filter-chip">Verdura</span><span class="filter-chip">Altro</span></div>`;
   if(!items.length)html+=emptyState(cat);
   else{
-    if(active.length){html+=`<div class="section-title">Disponibili (${active.length})</div>`;active.forEach(p=>html+=productCard(p));}
-    if(done.length){html+=`<div class="section-title">Finiti (${done.length})</div>`;done.forEach(p=>html+=productCard(p));}
+    if(active.length){html+=`<div class="section-title">In scadenza <span style="margin-left:auto;color:var(--accent);font-size:12px">Vedi tutti</span></div>`;active.forEach(p=>html+=productCard(p));}
+    if(done.length){html+=`<div class="section-title">Buono stato</div>`;done.forEach(p=>html+=productCard(p));}
   }
   el.innerHTML=html;bindLongPress(el);
+}
+function filterVisibleProducts(q){
+  q=String(q||'').toLowerCase();
+  document.querySelectorAll('.product-item').forEach(el=>{
+    const name=(el.querySelector('.product-name')?.textContent||'').toLowerCase();
+    el.style.display=name.includes(q)?'flex':'none';
+  });
+}
+function productEmoji(p){
+  const n=(p.name||'').toLowerCase();
+  if(n.includes('latte'))return'🥛';
+  if(n.includes('yogurt'))return'🥣';
+  if(n.includes('pollo')||n.includes('carne'))return'🥩';
+  if(n.includes('uova')||n.includes('uovo'))return'🥚';
+  if(n.includes('mozzarella')||n.includes('formaggio'))return'🧀';
+  if(n.includes('pasta'))return'🍝';
+  if(n.includes('acqua'))return'💧';
+  if(n.includes('pane'))return'🍞';
+  if(n.includes('pomodoro')||n.includes('passata'))return'🍅';
+  if(n.includes('banana'))return'🍌';
+  return p.category==='frigo'?'🧊':p.category==='dispensa'?'🫙':'📦';
 }
 function productCard(p){
   const ec=p.expiry?expiryClass(p.expiry):'';
   const itemCls=p.checked?'checked':(ec==='expired'?'expired':ec==='soon'?'expiring':'');
   return`<div class="product-item ${itemCls}" data-id="${p.id}">
-    <button class="check-btn ${p.checked?'checked':''}" onclick="toggleCheck('${p.id}')">${p.checked?'✓':''}</button>
+    <div class="product-thumb">${productEmoji(p)}</div>
     <div class="product-info">
       <div class="product-name">${esc(p.name)}</div>
       <div class="product-meta">
-        <span class="product-cat ${catClass(p.category)}" onclick="event.stopPropagation();cycleCat('${p.id}')">${catLabel(p.category)}</span>
-        ${p.qty?`<span class="product-qty">×${p.qty}${p.unit?' '+p.unit:''}</span>`:''}
+        ${p.checked?`<span class="product-date">Aperto</span>`:''}
+        ${p.qty?`<span class="product-qty">${p.qty}${p.unit?' '+p.unit:''}</span>`:''}
         ${expiryBadgeHtml(p)}
-        <span class="product-date">${fmt(p.addedAt)}</span>
+        ${!p.expiry?`<span class="product-date">${fmt(p.addedAt)}</span>`:''}
       </div>
     </div>
     <div class="product-actions">
       ${calBtnHtml(p.id,'product',p.expiry)}
-      <button class="small-btn" onclick="event.stopPropagation();openEdit('${p.id}')">✏️</button>
-      <button class="small-btn danger" onclick="event.stopPropagation();deleteProduct('${p.id}')">🗑</button>
+      <button class="small-btn" onclick="event.stopPropagation();openEdit('${p.id}')">⋮</button>
     </div>
   </div>`;
 }
@@ -1304,6 +1558,7 @@ function renderCarrello(el){
 }
 
 function renderRicerca(el){
+  normalizeState();
   const sv=(el.querySelector('#search-global')||{}).value||'';
   const frigo=state.products.filter(p=>p.category==='frigo'&&!p.checked).length;
   const dispensa=state.products.filter(p=>p.category==='dispensa'&&!p.checked).length;
@@ -1313,54 +1568,41 @@ function renderRicerca(el){
   const exp=state.products.filter(p=>!p.checked&&p.expiry&&daysToExpiry(p.expiry)<=7).length;
   let html=`<section class="home-hero">
     <div>
-      <div class="home-kicker">Famiglia ${esc(cfg.familyCode||'locale')}</div>
-      <h1>Ciao, Freddie 👋</h1>
-      <p>Sai cosa hai. Eviti sprechi. Comprate solo ciò che serve.</p>
+      <h1>Ciao, Freddie! 👋</h1>
+      <div class="home-kicker">Famiglia ${esc(cfg.familyCode||'locale')} <span class="sync-badge online" style="margin-left:8px">Codice: ${esc(cfg.familyCode||'—')}</span></div>
     </div>
-    <button class="hero-family" onclick="openModal('modal-family')">👨‍👩‍👧</button>
+    <button class="hero-family" onclick="openModal('modal-family')">👥</button>
+  </section>
+  <section class="dashboard-overview">
+    <div class="overview-title">Panoramica oggi</div>
+    <div class="overview-grid">
+      <div class="overview-item"><div class="overview-num">${frigo}</div><div class="overview-label">Prodotti<br>nel frigo</div></div>
+      <div class="overview-item"><div class="overview-num">${dispensa}</div><div class="overview-label">Prodotti<br>in dispensa</div></div>
+      <div class="overview-item"><div class="overview-num">${exp}</div><div class="overview-label">In scadenza<br>questa settimana</div></div>
+    </div>
   </section>
   <div class="dashboard-grid">
-    <button class="dash-card" onclick="switchBot('frigo')"><span>❄️</span><strong>Frigo</strong><small>${frigo} prodotti</small></button>
-    <button class="dash-card" onclick="switchBot('dispensa')"><span>🫙</span><strong>Dispensa</strong><small>${dispensa} prodotti</small></button>
-    <button class="dash-card" onclick="switchTop('spesa')"><span>🛒</span><strong>Lista spesa</strong><small>${spesa} elementi</small></button>
-    <button class="dash-card" onclick="switchTop('carrello')"><span>🧺</span><strong>Carrello</strong><small>${cart} da confermare</small></button>
+    <button class="dash-card" onclick="switchBot('frigo')"><span>🧊</span><strong>Frigo</strong><small>Vedi cosa hai</small></button>
+    <button class="dash-card" onclick="switchBot('dispensa')"><span>🎁</span><strong>Dispensa</strong><small>Vedi cosa hai</small></button>
+    <button class="dash-card" onclick="switchTop('spesa')"><span>🛍️</span><strong>Lista spesa</strong><small>${spesa} elementi</small></button>
+    <button class="dash-card" onclick="switchTop('carrello')"><span>🛒</span><strong>Carrello</strong><small>${cart} prodotti</small></button>
   </div>
   <div class="scan-card" onclick="openCamera()">
     <div><strong>Scansione scontrino</strong><small>Aggiungi prodotti in un attimo</small></div><span>⌗</span>
   </div>
-  <div class="stats-row home-stats">
-    <div class="stat-card"><div class="stat-num">${frigo}</div><div class="stat-label">In frigo</div></div>
-    <div class="stat-card"><div class="stat-num">${dispensa}</div><div class="stat-label">In dispensa</div></div>
-    <div class="stat-card"><div class="stat-num">${exp}</div><div class="stat-label">In scadenza 7gg</div></div>
-  </div>
   <div class="search-bar"><span class="search-icon">🔍</span><input id="search-global" placeholder="Cerca un prodotto..." oninput="renderMain()" value="${esc(sv)}" autocomplete="off">${sv?`<span class="search-clear" onclick="clearSearch()">✕</span>`:''}</div>`;
-
-  if(!sv){
-    const latest=[...state.products].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).slice(0,4);
-    if(latest.length){
-      html+=`<div class="section-title">Ultimi prodotti</div>`;
-      latest.forEach(p=>html+=productCard(p));
-    }
-    el.innerHTML=html;bindLongPress(el);return;
-  }
-
+  if(!sv){el.innerHTML=html;return;}
   const q=sv.toLowerCase(),results=[],seen=new Set();
   state.products.filter(p=>!p.checked&&p.name.toLowerCase().includes(q)).forEach(p=>{const k=p.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'home',name:p.name,where:catLabel(p.category),pid:p.id});}});
-  state.shoppingList.filter(s=>s.name.toLowerCase().includes(q)).forEach(s=>{const k=s.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:s.name,where:'🛒 Lista Spesa'});}else{const ex=results.find(r=>r.name.toLowerCase()===k);if(ex)ex.alsoSpesa=true;}});
-  state.cart.filter(c=>c.name.toLowerCase().includes(q)).forEach(c=>{const k=c.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:c.name,where:'🧺 Carrello'});}});
-  state.products.filter(p=>p.checked&&p.name.toLowerCase().includes(q)).forEach(p=>{const k=p.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'history',name:p.name,where:catLabel(p.category)+' (storico)',pid:p.id});}});
+  state.shoppingList.filter(s=>s.name.toLowerCase().includes(q)).forEach(s=>{const k=s.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:s.name,where:'🛍️ Lista Spesa'});}});
+  state.cart.filter(c=>c.name.toLowerCase().includes(q)).forEach(c=>{const k=c.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:c.name,where:'🛒 Carrello'});}});
   if(!results.length){
     html+=`<div class="not-found-box"><div class="nf-icon">🐾</div><div class="nf-text">Prodotto "<strong>${esc(sv)}</strong>" non presente</div><button class="nf-add" onclick="addSearchToSpesa('${esc(sv)}')">+ Aggiungi alla lista</button></div>`;
   }else{
     html+=`<div class="section-title">${results.length} risultat${results.length===1?'o':'i'}</div>`;
-    results.forEach(r=>{
-      const cls=r.type==='home'?'home':r.type==='cart'?'cart':'history';
-      const icon=r.type==='home'?'🏠':r.type==='cart'?'🛒':'📋';
-      const w=r.alsoSpesa?r.where+' · in lista':r.where;
-      html+=`<div class="sr-item ${cls}"><span class="sr-icon">${icon}</span><div class="sr-info"><div class="sr-name">${esc(r.name)}</div><div class="sr-where">${esc(w)}</div></div>${r.type==='history'?`<button class="sr-add-btn" onclick="addToSpesaByName('${esc(r.name)}')">+ Lista</button>`:''}${r.type==='home'&&!r.alsoSpesa?`<button class="sr-add-btn" onclick="addToSpesaByName('${esc(r.name)}')">+ Lista</button>`:''}</div>`;
-    });
+    results.forEach(r=>html+=`<div class="sr-item ${r.type==='home'?'home':'cart'}"><span class="sr-icon">${r.type==='home'?'🏠':'🛒'}</span><div class="sr-info"><div class="sr-name">${esc(r.name)}</div><div class="sr-where">${esc(r.where)}</div></div><button class="sr-add-btn" onclick="addToSpesaByName('${esc(r.name)}')">+ Lista</button></div>`);
   }
-  el.innerHTML=html;bindLongPress(el);
+  el.innerHTML=html;
 }
 function clearSearch(){const i=document.getElementById('search-global');if(i)i.value='';renderMain();}
 

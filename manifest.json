@@ -5,8 +5,8 @@
   "start_url": "/SchrodinFridge/index.html",
   "scope": "/SchrodinFridge/",
   "display": "standalone",
-  "background_color": "#f7f7fb",
-  "theme_color": "#f7f7fb",
+  "background_color": "#fbfafc",
+  "theme_color": "#fbfafc",
   "orientation": "portrait-primary",
   "lang": "it",
   "icons": [
