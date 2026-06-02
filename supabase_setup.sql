@@ -1,6 +1,3 @@
--- SchrodingerFridge - setup Supabase idempotente
--- Esegui tutto in Supabase > SQL Editor.
-
 create table if not exists public.items (
   id text primary key,
   family_code text not null,
@@ -25,36 +22,15 @@ create index if not exists items_added_at_idx on public.items(added_at);
 
 alter table public.items enable row level security;
 
-drop policy if exists "anon can read family items" on public.items;
-drop policy if exists "anon can insert family items" on public.items;
-drop policy if exists "anon can update family items" on public.items;
-drop policy if exists "anon can delete family items" on public.items;
 drop policy if exists "public anon read items" on public.items;
 drop policy if exists "public anon insert items" on public.items;
 drop policy if exists "public anon update items" on public.items;
 drop policy if exists "public anon delete items" on public.items;
 
--- App senza login: la separazione è gestita dal family_code usato dall'app.
-create policy "public anon read items"
-on public.items for select
-to anon
-using (true);
-
-create policy "public anon insert items"
-on public.items for insert
-to anon
-with check (family_code is not null and length(trim(family_code)) >= 4);
-
-create policy "public anon update items"
-on public.items for update
-to anon
-using (true)
-with check (family_code is not null and length(trim(family_code)) >= 4);
-
-create policy "public anon delete items"
-on public.items for delete
-to anon
-using (true);
+create policy "public anon read items" on public.items for select to anon using (true);
+create policy "public anon insert items" on public.items for insert to anon with check (family_code is not null and length(trim(family_code)) >= 4);
+create policy "public anon update items" on public.items for update to anon using (true) with check (family_code is not null and length(trim(family_code)) >= 4);
+create policy "public anon delete items" on public.items for delete to anon using (true);
 
 grant usage on schema public to anon;
 grant select, insert, update, delete on public.items to anon;
@@ -62,17 +38,9 @@ grant select, insert, update, delete on public.items to anon;
 do $$
 begin
   if not exists (
-    select 1
-    from pg_publication_tables
-    where pubname = 'supabase_realtime'
-      and schemaname = 'public'
-      and tablename = 'items'
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'items'
   ) then
     alter publication supabase_realtime add table public.items;
   end if;
 end $$;
-
--- Test manuale facoltativo:
--- insert into public.items(id,family_code,list_type,name,category)
--- values ('test-1','PROVA-1234','shopping','Latte','frigo')
--- on conflict (id) do update set name=excluded.name;

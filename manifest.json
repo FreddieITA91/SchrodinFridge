@@ -1,17 +1,13 @@
 {
   "name": "SchrodingerFridge",
-  "short_name": "SchrodFridge",
-  "description": "Gestione mobile di frigo, dispensa, lista spesa e scontrini con sync Supabase",
-  "start_url": "/SchrodinFridge/index.html",
+  "short_name": "Fridge",
+  "start_url": "/SchrodinFridge/",
   "scope": "/SchrodinFridge/",
   "display": "standalone",
-  "background_color": "#fbfafc",
-  "theme_color": "#fbfafc",
-  "orientation": "portrait-primary",
-  "lang": "it",
+  "background_color": "#ffffff",
+  "theme_color": "#7c3aed",
   "icons": [
-    { "src": "/SchrodinFridge/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/SchrodinFridge/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
-  ],
-  "categories": ["food", "lifestyle", "utilities"]
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
 }
