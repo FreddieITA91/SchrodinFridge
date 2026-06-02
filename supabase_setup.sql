@@ -60,7 +60,18 @@ using (true);
 grant usage on schema public to anon;
 grant select, insert, update, delete on public.items to anon;
 
-alter publication supabase_realtime add table public.items;
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'items'
+  ) then
+    alter publication supabase_realtime add table public.items;
+  end if;
+end $$;
 
 -- Test manuale facoltativo:
 -- insert into public.items(id,family_code,list_type,name,category)

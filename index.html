@@ -69,7 +69,7 @@ body::before{
 #splash.hide{opacity:0;pointer-events:none}
 .splash-icon,.setup-logo{
   width:116px;height:116px;border-radius:34px;
-  background:url('/SchrodinFridge/icon-192.png') center/contain no-repeat;
+  background:url('/SchrodinFridge/icon-192.png?v=14') center/contain no-repeat;
   font-size:0;display:block;
   filter:drop-shadow(0 16px 24px rgba(124,106,245,.18));
   animation:floaty 1.8s ease-in-out infinite alternate;
@@ -130,7 +130,7 @@ header{
 }
 .app-title .brand-mark{
   width:34px;height:34px;border-radius:12px;
-  background:url('/SchrodinFridge/icon-192.png') center/cover no-repeat;
+  background:url('/SchrodinFridge/icon-192.png?v=14') center/cover no-repeat;
   display:inline-flex;flex:0 0 auto;
 }
 .header-actions{display:flex;gap:7px}
@@ -503,7 +503,7 @@ nav{
 <div id="setup-screen" class="hidden">
   <div class="setup-logo">🐱</div>
   <div class="setup-h">SchrodingerFridge</div>
-  <div class="setup-sub">Inserisci un codice famiglia per sincronizzare le liste, oppure crea il tuo.</div>
+  <div class="setup-sub">Inserisci un codice famiglia per sincronizzare le liste, oppure crea il tuo frigo condiviso.</div>
   <div class="setup-card" style="max-width:360px;width:100%">
     <h3>🔗 Unisciti a una famiglia</h3>
     <p>Inserisci il codice condiviso da un familiare.</p>
@@ -1379,23 +1379,64 @@ function injectManifest(){}
 // ═══════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════
-function init(){
-  loadLocal();initNav();
-  setOcrMode(cfg.ocrMode||'vision');
-  document.getElementById('btn-scan').addEventListener('click',openCamera);
-  document.getElementById('btn-settings').addEventListener('click',openSettings);
-  document.getElementById('btn-family').addEventListener('click',()=>{document.getElementById('family-code-display').textContent=cfg.familyCode||'—';openModal('modal-family');});
-  document.getElementById('fab').addEventListener('click',()=>{if(topTab==='spesa')addToSpesaManual();else if(topTab==='carrello')addToCarrelloChoice();else openAdd();});
-  setTimeout(()=>{
-    document.getElementById('splash').classList.add('hide');
-    setTimeout(()=>{
-      document.getElementById('splash').style.display='none';
-      if(!cfg.sbUrl||!cfg.sbKey){openModal('modal-supabase');}
-      if(!cfg.familyCode){document.getElementById('setup-screen').classList.remove('hidden');}
-      else{startApp();}
-    },500);
-  },900);
+function hideSplashNow(){
+  const sp=document.getElementById('splash');
+  if(!sp)return;
+  sp.classList.add('hide');
+  setTimeout(()=>{sp.style.display='none';},250);
 }
+function showStartupFallback(err){
+  console.error('Startup error',err);
+  hideSplashNow();
+  const setup=document.getElementById('setup-screen');
+  const app=document.getElementById('app');
+  if(setup&&(!cfg.familyCode||!cfg.sbUrl||!cfg.sbKey)){
+    setup.classList.remove('hidden');
+    if(app)app.style.display='none';
+  }else if(app){
+    app.style.display='flex';
+    try{renderMain();updateBadges();updateExpiryAlert();}catch(e){}
+  }
+  toast('⚠️ Avvio ripristinato. Se vedi dati vecchi, cancella cache sito.',6000);
+}
+function init(){
+  try{
+    loadLocal();
+    initNav();
+    setOcrMode(cfg.ocrMode||'vision');
+
+    const scan=document.getElementById('btn-scan');
+    const settings=document.getElementById('btn-settings');
+    const family=document.getElementById('btn-family');
+    const fab=document.getElementById('fab');
+
+    if(scan)scan.addEventListener('click',openCamera);
+    if(settings)settings.addEventListener('click',openSettings);
+    if(family)family.addEventListener('click',()=>{document.getElementById('family-code-display').textContent=cfg.familyCode||'—';openModal('modal-family');});
+    if(fab)fab.addEventListener('click',()=>{if(topTab==='spesa')addToSpesaManual();else if(topTab==='carrello')addToCarrelloChoice();else openAdd();});
+
+    setTimeout(()=>{
+      hideSplashNow();
+      setTimeout(()=>{
+        try{
+          if(!cfg.familyCode){
+            document.getElementById('setup-screen').classList.remove('hidden');
+            document.getElementById('app').style.display='none';
+          }else{
+            startApp();
+          }
+          if(!cfg.sbUrl||!cfg.sbKey){
+            setTimeout(()=>openModal('modal-supabase'),350);
+          }
+        }catch(e){showStartupFallback(e);}
+      },260);
+    },450);
+  }catch(e){
+    showStartupFallback(e);
+  }
+}
+window.addEventListener('error',e=>console.error('JS error:',e.message,e.error));
+window.addEventListener('unhandledrejection',e=>console.error('Promise error:',e.reason));
 document.addEventListener('DOMContentLoaded',init);
 </script>
 <script>
