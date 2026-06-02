@@ -710,6 +710,60 @@ nav{
   background:var(--navy);color:#fff;border-radius:9px;padding:5px;
 }
 
+
+/* v16 app shell alignment and family modal fix */
+#app{
+  width:100%;
+  max-width:480px;
+  margin:0 auto;
+  min-height:100dvh;
+  background:#fbfafc;
+  position:relative;
+}
+header{
+  width:100%;
+  max-width:480px;
+  margin:0 auto;
+  left:auto;
+  right:auto;
+  transform:none;
+}
+main{
+  width:100%;
+  max-width:480px;
+  margin:0 auto;
+}
+nav{
+  left:50%;
+  right:auto;
+  width:min(480px,100vw);
+  transform:translateX(-50%);
+}
+#fab{
+  right:max(17px,calc((100vw - 480px)/2 + 17px));
+}
+@media (min-width:680px){
+  body{max-width:none;margin:0;background:#f3f2f8}
+  header{position:sticky;top:0}
+  nav{left:50%;right:auto;width:480px;transform:translateX(-50%)}
+  #fab{right:calc((100vw - 480px)/2 + 17px)}
+}
+.app-title{
+  justify-content:flex-start;
+}
+.header-top{
+  justify-content:space-between;
+}
+#setup-screen{
+  z-index:9000;
+}
+.modal-overlay{
+  z-index:9500;
+}
+.modal-overlay.open{
+  pointer-events:all;
+}
+
 </style>
 </head>
 <body>
@@ -728,16 +782,16 @@ nav{
     <h3>🔗 Unisciti a una famiglia</h3>
     <p>Inserisci il codice condiviso da un familiare.</p>
     <input class="input-field" id="join-code" placeholder="Es. ROSSI-4829" autocomplete="off" style="text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">
-    <button class="btn btn-primary" style="width:100%" onclick="joinFamily()">Unisciti</button>
+    <button type="button" class="btn btn-primary" style="width:100%" onclick="joinFamily()">Unisciti</button>
   </div>
   <div class="setup-or">— oppure —</div>
   <div class="setup-card" style="max-width:360px;width:100%">
     <h3>✨ Crea una nuova famiglia</h3>
     <p>Genera un codice da condividere con i familiari.</p>
-    <button class="btn btn-ghost" style="width:100%" onclick="createFamily()">Crea famiglia</button>
+    <button type="button" class="btn btn-ghost" style="width:100%" onclick="createFamily()">Crea famiglia</button>
   </div>
   <div style="margin-top:14px;max-width:360px;width:100%">
-    <button class="btn btn-ghost" style="width:100%;font-size:12px;opacity:.6" onclick="useOffline()">Continua offline (solo locale)</button>
+    <button type="button" class="btn btn-ghost" style="width:100%;font-size:12px;opacity:.6" onclick="useOffline()">Continua offline (solo locale)</button>
   </div>
   <div id="setup-error" style="display:none;color:var(--red);font-size:12px;margin-top:10px;text-align:center"></div>
 </div>
@@ -756,7 +810,7 @@ nav{
         </span>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" id="btn-family">👨‍👩‍👧</button>
+        <button class="icon-btn" id="btn-family" onclick="openFamilyModal()">👥</button>
         <button class="icon-btn" id="btn-settings">⚙️</button>
         <button class="icon-btn accent" id="btn-scan">📷</button>
       </div>
@@ -809,7 +863,7 @@ nav{
 <div class="modal-overlay" id="modal-family">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">👨‍👩‍👧 La tua Famiglia</div>
+    <div class="modal-title">👥 La tua Famiglia</div>
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Codice famiglia:</div>
       <div class="code-display" id="family-code-display">—</div>
@@ -1243,46 +1297,66 @@ async function deleteItem(id){
 // ═══════════════════════════════════════════
 function showSetupError(msg){const el=document.getElementById('setup-error');el.textContent=msg;el.style.display='block';}
 function joinFamily(){
-  const code=document.getElementById('join-code').value.trim().toUpperCase();
+  const input=document.getElementById('join-code');
+  const code=(input?.value||'').trim().toUpperCase();
   if(code.length<4){showSetupError('Inserisci un codice valido');return;}
+  closeAllModals();
   if(cfg.familyCode!==code){
     resetRealtime();
     cfg.familyCode=code;
     familyJustChanged=true;
-    clearFamilyState();
-  }else{
-    cfg.familyCode=code;saveLocal();
+    state=emptyState();
+    syncQueue=[];
   }
-  if(!cfg.sbUrl||!cfg.sbKey){openModal('modal-supabase');}else{startApp();}
+  saveLocal();
+  startApp();
+  if(!cfg.sbUrl||!cfg.sbKey)setTimeout(()=>openModal('modal-supabase'),350);
 }
 function createFamily(){
+  closeAllModals();
   resetRealtime();
   cfg.familyCode=genFamilyCode();
   familyJustChanged=true;
-  clearFamilyState();
-  document.getElementById('setup-screen').classList.add('hidden');
+  state=emptyState();
+  syncQueue=[];
+  saveLocal();
   startApp();
-  toast('Codice famiglia: '+cfg.familyCode+' — condividilo dal menu 👨‍👩‍👧',5000);
+  if(!cfg.sbUrl||!cfg.sbKey)setTimeout(()=>openModal('modal-supabase'),350);
+  toast('Codice famiglia: '+cfg.familyCode+' — condividilo dal menu 👥',5000);
 }
 function useOffline(){
+  closeAllModals();
   if(!cfg.familyCode){
     resetRealtime();
     cfg.familyCode='LOCAL-'+uid().slice(0,4);
     familyJustChanged=true;
-    clearFamilyState();
+    state=emptyState();
+    syncQueue=[];
+    saveLocal();
   }else saveLocal();
   startApp();
 }
 function changeFamily(){
-  closeModal('modal-settings');
+  closeAllModals();
   resetRealtime();
   cfg.familyCode='';
   familyJustChanged=true;
   clearFamilyState();
   setSyncStatus('offline');
   showSetupScreen();
+  toast('Scegli o crea una nuova famiglia');
 }
-function showSetupScreen(){document.getElementById('setup-screen').classList.remove('hidden');document.getElementById('app').style.display='none';document.getElementById('join-code').value=cfg.familyCode||'';}
+function showSetupScreen(){
+  closeAllModals();
+  const setup=document.getElementById('setup-screen');
+  const app=document.getElementById('app');
+  if(setup)setup.classList.remove('hidden');
+  if(app)app.style.display='none';
+  const join=document.getElementById('join-code');
+  if(join)join.value='';
+  const err=document.getElementById('setup-error');
+  if(err){err.textContent='';err.style.display='none';}
+}
 function saveSupabaseConfig(){
   const url=document.getElementById('sb-url').value.trim().replace(/\/+$/,'');
   const key=document.getElementById('sb-key').value.trim();
@@ -1311,10 +1385,15 @@ async function debugSupabaseFamily(){
 }
 
 function startApp(){
-  document.getElementById('setup-screen').classList.add('hidden');
-  document.getElementById('app').style.display='flex';
-  document.getElementById('family-code-display').textContent=cfg.familyCode;
-  renderMain();updateBadges();updateExpiryAlert();fullSync();
+  normalizeState();
+  closeAllModals();
+  const setup=document.getElementById('setup-screen');
+  const app=document.getElementById('app');
+  if(setup)setup.classList.add('hidden');
+  if(app)app.style.display='flex';
+  refreshFamilyDisplay();
+  renderMain();updateBadges();updateExpiryAlert();
+  fullSync();
 }
 // Share codice famiglia
 function shareVia(method){
@@ -1609,8 +1688,26 @@ function clearSearch(){const i=document.getElementById('search-global');if(i)i.v
 // ═══════════════════════════════════════════
 //  MODALS
 // ═══════════════════════════════════════════
-function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
-function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+function refreshFamilyDisplay(){
+  const el=document.getElementById('family-code-display');
+  if(el)el.textContent=cfg.familyCode||'—';
+}
+function closeAllModals(){
+  document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+  document.body.style.overflow='';
+}
+function openModal(id){
+  if(id==='modal-family')refreshFamilyDisplay();
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.classList.add('open');document.body.style.overflow='hidden';
+}
+function closeModal(id){
+  const el=document.getElementById(id);
+  if(el)el.classList.remove('open');
+  if(!document.querySelector('.modal-overlay.open'))document.body.style.overflow='';
+}
+function openFamilyModal(){refreshFamilyDisplay();openModal('modal-family');}
 document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)closeModal(el.id);}));
 
 // ═══════════════════════════════════════════
@@ -1654,7 +1751,7 @@ function init(){
 
     if(scan)scan.addEventListener('click',openCamera);
     if(settings)settings.addEventListener('click',openSettings);
-    if(family)family.addEventListener('click',()=>{document.getElementById('family-code-display').textContent=cfg.familyCode||'—';openModal('modal-family');});
+    if(family)family.addEventListener('click',openFamilyModal);
     if(fab)fab.addEventListener('click',()=>{if(topTab==='spesa')addToSpesaManual();else if(topTab==='carrello')addToCarrelloChoice();else openAdd();});
 
     setTimeout(()=>{
