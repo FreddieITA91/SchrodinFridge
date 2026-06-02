@@ -1,6 +1,5 @@
-
-    'use strict';
-    const APP_VERSION='step9-functionality-sync-searchfix-2026-06-02-01';
+'use strict';
+    const APP_VERSION='step10-supabasejs-sync-search-stable-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
@@ -88,6 +87,23 @@ function renderHome(){const house=activeProducts().length,list=shoppingStats().o
     function renderHouse(mode='all'){let base=[...state.products];if(mode==='expiring')base=base.filter(isExpiring);if(mode==='expired')base=base.filter(isExpired);let items=orderProducts(base);const q=houseSearch.trim().toLowerCase();if(q)items=items.filter(x=>itemText(x).includes(q));const title=mode==='expired'?'Prodotti scaduti':mode==='expiring'?'Prodotti in scadenza':'Prodotti in casa';const count=mode==='all'?activeProducts().length:base.length;return `<div class="top"><div><h2>${title}</h2><div class="muted">${count} voci · ${selectedHouse.size} selezionate</div></div><button class="icon-btn" onclick="setView('home')">↩</button></div><input id="search-house" class="input search" placeholder="Cerca in questa lista" value="${esc(houseSearch)}" oninput="handleSearchInput('search-house','houseSearch')"><div class="tools"><button class="ghost" onclick="selectAllHouse('${mode}')">Seleziona tutto</button><button class="ghost" onclick="clearHouseSelection()">Deseleziona</button></div><div class="tools"><button class="secondary" onclick="houseSelectedToShopping()">Rimetti selezionati in lista</button><button class="danger" onclick="deleteSelectedHouse()">Cancella selezionati</button></div><div class="tools"><button class="danger" onclick="deleteAllHouse('${mode}')">Cancella tutti</button><button class="ghost" onclick="fullSync()">Sync</button></div>${items.length?items.map(renderHouseItem).join(''):renderNoResults(houseSearch,'product','dispensa','Nessun prodotto')}`;}
     function renderHouseItem(it){const on=selectedHouse.has(it.id);return `<article class="item compact ${it.checked?'done':''}" onclick="toggleHouseDone('${esc(it.id)}')"><button class="check-btn ${on?'on':''}" onclick="event.stopPropagation();toggleHouseSelect('${esc(it.id)}')">${on?'✓':''}</button><div class="main"><div class="item-name">${esc(it.name)} ${statusHtml(it)}</div><div class="meta">${fmtQty(it)} · ${catLabel(it.category)}${it.expiry?' · scad. '+esc(it.expiry):''}${it.notes?' · '+esc(it.notes):''}</div></div><div class="actions compact" onclick="event.stopPropagation()"><button title="Modifica" onclick="openEditModal('product','${esc(it.id)}')">✏️</button><button title="Rimetti in lista spesa" onclick="productToShopping('${esc(it.id)}')">🛒</button><button title="Cancella" onclick="deleteItem('product','${esc(it.id)}')">×</button></div></article>`;}
 
+    function handleSearchInput(id, varName){
+      const el=document.getElementById(id);
+      if(!el)return;
+      if(varName==='cartSearch')cartSearch=el.value;
+      else if(varName==='houseSearch')houseSearch=el.value;
+      else searchText=el.value;
+      const start=typeof el.selectionStart==='number'?el.selectionStart:null;
+      const end=typeof el.selectionEnd==='number'?el.selectionEnd:null;
+      render();
+      requestAnimationFrame(()=>{
+        const n=document.getElementById(id);
+        if(n){
+          n.focus({preventScroll:true});
+          if(start!==null&&typeof n.setSelectionRange==='function')n.setSelectionRange(start,end);
+        }
+      });
+    }
     function rerenderKeepFocus(id){const el=document.getElementById(id);const start=el&&typeof el.selectionStart==='number'?el.selectionStart:null;const end=el&&typeof el.selectionEnd==='number'?el.selectionEnd:null;render();requestAnimationFrame(()=>{const n=document.getElementById(id);if(n){n.focus();if(start!==null)n.setSelectionRange(start,end);}});}
 
     function renderDuplicateAlert(arr){const dup=duplicates(arr);return dup.length?`<div class="alert">Possibili duplicati: ${dup.map(esc).join(', ')}</div>`:'';}
@@ -135,19 +151,88 @@ function renderHome(){const house=activeProducts().length,list=shoppingStats().o
     function openSettings(){document.getElementById('supabase-url').value=cfg.supabaseUrl||DEFAULT_SUPABASE_URL;document.getElementById('supabase-key').value=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;const f=document.getElementById('settings-family');if(f)f.textContent=cfg.familyCode||'offline';document.getElementById('modal-settings').classList.add('open');renderDebug();}
     function saveSettings(){cfg.supabaseUrl=document.getElementById('supabase-url').value.trim()||DEFAULT_SUPABASE_URL;cfg.supabaseKey=document.getElementById('supabase-key').value.trim()||DEFAULT_SUPABASE_KEY;saveConfig();closeAllModals();initSupabase();fullSync();}
     
-function remoteBase(){return String(cfg.supabaseUrl||DEFAULT_SUPABASE_URL).replace(/\/$/,'')+'/rest/v1';}
-    function remoteHeaders(extra={}){const key=String(cfg.supabaseKey||DEFAULT_SUPABASE_KEY).trim();return {apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json',...extra};}
-    async function remoteFetch(path,opts={}){const res=await fetch(remoteBase()+path,{...opts,headers:{...remoteHeaders(),...(opts.headers||{})}});const text=await res.text();let data=null;try{data=text?JSON.parse(text):null;}catch{data=text;}if(!res.ok){const msg=typeof data==='string'?data:JSON.stringify(data);throw new Error(`Supabase REST ${res.status}: ${msg}`);}return data;}
-    function familyPattern(){return encodeURIComponent(cfg.familyCode);}
-    function initSupabase(){resetRealtime();if(cfg.offline||!cfg.supabaseUrl||!cfg.supabaseKey){setSyncStatus(cfg.offline?'offline':'config');return;}try{if(window.supabase){sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseKey);subscribeRealtime();}setSyncStatus('online');lastError='';}catch(e){setLastError(e);setSyncStatus('error');}}
+
+    function initSupabase(){
+      resetRealtime();
+      if(cfg.offline||!cfg.supabaseUrl||!cfg.supabaseKey||!window.supabase){
+        setSyncStatus(cfg.offline?'offline':'config');
+        return;
+      }
+      try{
+        sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+        subscribeRealtime();
+        lastError='';
+        setSyncStatus('online');
+      }catch(e){setLastError(e);setSyncStatus('error');}
+    }
     function resetRealtime(){if(channel&&sb)try{sb.removeChannel(channel)}catch{} channel=null;sb=null;}
-    function subscribeRealtime(){if(!sb||!cfg.familyCode)return;channel=sb.channel('items-'+cfg.familyCode).on('postgres_changes',{event:'*',schema:'public',table:'items'},payload=>{const row=payload.new||payload.old;if(row&&normalizeFamilyCode(row.family_code)===cfg.familyCode)fullSync();}).subscribe();}
+    function subscribeRealtime(){
+      if(!sb||!cfg.familyCode)return;
+      channel=sb.channel('items-'+cfg.familyCode)
+        .on('postgres_changes',{event:'*',schema:'public',table:'items'},payload=>{
+          const row=payload.new||payload.old;
+          if(row&&normalizeFamilyCode(row.family_code)===cfg.familyCode)fullSync();
+        }).subscribe();
+    }
     function rowFromItem(it){it=normalizeItem(it);return{id:it.id,family_code:cfg.familyCode,list_type:it.list_type,name:it.name,category:it.category,qty:Math.max(0,Math.round(Number(it.qty)||1)),unit:it.unit||'pz',notes:it.notes||'',checked:!!it.checked,confirmed:!!it.confirmed,origin_category:it.origin_category||it.category,added_at:it.added_at||Date.now(),checked_at:it.checked_at||null,updated_at:Date.now(),expiry:it.expiry||null};}
-    function applyRows(rows){state=emptyState();(rows||[]).forEach(r=>{const it=normalizeItem(r); if(it.list_type==='shopping')state.shoppingList.push(it);else if(it.list_type==='cart')state.cart.push(it);else state.products.push(it);});saveLocal(false);render();}
-    async function fullSync(){normalizeState();if(cfg.offline){setSyncStatus('offline');return;}if(!cfg.supabaseUrl||!cfg.supabaseKey){setSyncStatus('config');return;}const startedStamp=localMutationStamp;syncRunning=true;setSyncStatus('sync');try{let data=await remoteFetch(`/items?select=*&family_code=ilike.${familyPattern()}&order=added_at.desc`,{method:'GET',headers:{'Accept':'application/json'}});if(startedStamp!==localMutationStamp){setSyncStatus('online');syncRunning=false;return;}applyRows(Array.isArray(data)?data:[]);lastError='';setSyncStatus('online');}catch(e){setLastError(e);setSyncStatus('error');}finally{syncRunning=false;renderDebug();}}
-    async function upsertOne(item){if(cfg.offline||!cfg.supabaseUrl||!cfg.supabaseKey)return;try{await remoteFetch(`/items?on_conflict=id`,{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rowFromItem(item))});lastError='';setSyncStatus('online');}catch(e){setLastError(e);setSyncStatus('error');}}
-    async function deleteRemote(id){if(cfg.offline||!cfg.supabaseUrl||!cfg.supabaseKey)return;try{await remoteFetch(`/items?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{'Prefer':'return=minimal'}});lastError='';setSyncStatus('online');}catch(e){setLastError(e);setSyncStatus('error');}}
-    async function testRemoteRead(){try{const data=await remoteFetch(`/items?select=id,family_code,list_type,name&family_code=ilike.${familyPattern()}&limit=50`,{method:'GET',headers:{'Accept':'application/json'}});toast(`Test sync OK: ${(data||[]).length} righe`);fullSync();}catch(e){setLastError(e);toast('Errore test sync');}}
+    function applyRows(rows){
+      state=emptyState();
+      (rows||[]).forEach(r=>{const it=normalizeItem(r); if(it.list_type==='shopping')state.shoppingList.push(it);else if(it.list_type==='cart')state.cart.push(it);else state.products.push(it);});
+      saveLocal(false);render();
+    }
+    async function fullSync(){
+      normalizeState();
+      if(cfg.offline){setSyncStatus('offline');return;}
+      if(!sb){initSupabase();}
+      if(!sb){setSyncStatus('config');return;}
+      setSyncStatus('sync');
+      try{
+        const {data,error}=await sb.from('items').select('*').ilike('family_code',cfg.familyCode).order('added_at',{ascending:false});
+        if(error)throw error;
+        applyRows(data||[]);
+        lastError='';
+        setSyncStatus('online');
+      }catch(e){setLastError(e);setSyncStatus('error');}
+      finally{renderDebug();}
+    }
+    async function upsertOne(item){
+      if(cfg.offline)return;
+      if(!sb){initSupabase();}
+      if(!sb)return;
+      try{
+        const {error}=await sb.from('items').upsert(rowFromItem(item),{onConflict:'id'});
+        if(error)throw error;
+        lastError='';
+        setSyncStatus('online');
+      }catch(e){setLastError(e);setSyncStatus('error');}
+      finally{renderDebug();}
+    }
+    async function deleteRemote(id){
+      if(cfg.offline)return;
+      if(!sb){initSupabase();}
+      if(!sb)return;
+      try{
+        const {error}=await sb.from('items').delete().eq('id',id);
+        if(error)throw error;
+        lastError='';
+        setSyncStatus('online');
+      }catch(e){setLastError(e);setSyncStatus('error');}
+      finally{renderDebug();}
+    }
+    async function testRemoteRead(){
+      if(!sb){initSupabase();}
+      if(!sb)return toast('Configura Supabase');
+      try{
+        const {data,error}=await sb.from('items').select('id,family_code,list_type,name').ilike('family_code',cfg.familyCode).limit(50);
+        if(error)throw error;
+        toast(`Test sync OK: ${(data||[]).length} righe`);
+        fullSync();
+      }catch(e){setLastError(e);toast('Errore test sync');}
+    }
     function setSyncStatus(status){document.querySelectorAll('.sync').forEach(el=>{el.className='sync '+(status==='online'?'online':status==='error'?'error':'');el.textContent=status==='online'?'sincronizzato':status==='error'?'errore':status==='config'?'configura Supabase':status==='sync'?'sync...':status==='offline'?'offline':status;});}
-    function renderDebug(){const box=document.getElementById('debug');if(!box)return;const key=cfg.supabaseKey?cfg.supabaseKey.slice(0,8)+'…'+cfg.supabaseKey.slice(-5):'MANCANTE';box.textContent=`VERSIONE: ${APP_VERSION}\nFAMIGLIA: ${cfg.familyCode||'offline'}\nSUPABASE URL: ${cfg.supabaseUrl}\nANON KEY: ${key}\nLOCAL products/shopping/cart: ${state.products.length}/${state.shoppingList.length}/${state.cart.length}\nULTIMO ERRORE: ${lastError||'nessuno'}`;}
-  
+    function renderDebug(){const box=document.getElementById('debug');if(!box)return;const key=cfg.supabaseKey?cfg.supabaseKey.slice(0,8)+'…'+cfg.supabaseKey.slice(-5):'MANCANTE';box.textContent=`VERSIONE: ${APP_VERSION}
+FAMIGLIA: ${cfg.familyCode||'offline'}
+SUPABASE URL: ${cfg.supabaseUrl}
+ANON KEY: ${key}
+LOCAL products/shopping/cart: ${state.products.length}/${state.shoppingList.length}/${state.cart.length}
+ULTIMO ERRORE: ${lastError||'nessuno'}`;}
