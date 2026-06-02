@@ -1,5 +1,5 @@
 'use strict';
-    const APP_VERSION='step20r-chef-ai-reconnect-gemini-2026-06-02-01';
+    const APP_VERSION='step20s-save-recipe-receipt-scan-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
@@ -105,8 +105,25 @@ function shoppingStats(){return {open:countOpen(state.shoppingList), done:state.
 function cartStats(){return {open:countOpen(state.cart), done:state.cart.filter(x=>x.checked).length};}
 function renderCategoryTile(cat,title,subtitle){const st=catStats(cat);return `<button class="tile" onclick="setView('${cat}')"><img src="${iconFor(cat)}" class="tile-icon" alt="${title}"><h3>${title}</h3><p class="muted">${subtitle}</p><div class="tile-stats">${statLine('articoli presenti',st.presenti)}${statLine('articoli terminati',st.terminati)}${statLine('in scadenza / scaduti',st.expiring+' / '+st.expired)}</div></button>`;}
 function renderQuickAction(viewName, iconPath, title, subtitle, count, badgeId){return `<button class="quick-btn" onclick="setView('${viewName}')"><img src="${iconPath}" class="quick-icon" alt="${title}"><div><b>${title}</b><div class="quick-meta">${subtitle}</div></div><span id="${badgeId}" class="quick-badge ${count>0?'show':''}">${count}</span></button>`;}
-function renderHome(){const house=activeProducts().length,terminated=terminatedProducts().length,exp=expiringProducts().length,expired=expiredProducts().length,cart=cartStats().open,list=shoppingStats().open;return `<div class="top"><div><h2>Ciao, Freddie! 👋</h2><div class="muted">Famiglia: <b>${esc(cfg.familyCode||'offline')}</b> · <span class="sync">...</span></div></div><div class="top-actions"><button class="icon-btn" onclick="openSettings()" title="Impostazioni">⚙️</button><button class="icon-btn logout-top" onclick="logoutFamily()" title="Esci dalla famiglia">🚪</button></div></div><section class="hero"><small>Panoramica oggi</small><h3>Gestione famiglia</h3><div class="metrics"><div class="metric"><button onclick="setView('house')"><b>${house}</b><span>In casa</span></button></div><div class="metric"><button onclick="setView('terminated')"><b>${terminated}</b><span>Articoli terminati</span></button></div><div class="metric"><button onclick="setView('expiring')"><b>${exp}</b><span>In scadenza</span></button></div><div class="metric"><button onclick="setView('expired')"><b>${expired}</b><span>Scaduti</span></button></div></div></section><div class="home-quick">${renderQuickAction('shopping','ui-lista-cat.png','Lista spesa','Da acquistare',list,'badge-shopping-home')}${renderQuickAction('cart','ui-carrello-cat.png','Lista carrello','Da sistemare',cart,'badge-cart-home')}</div><div class="mascot-card"><div><small>Schrodinger Fridge</small><h3>Controlla cosa hai, prima di comprare</h3><p class="muted" style="color:#EDE7F8">Tieni sotto controllo scorte, scadenze e lista della spesa di famiglia.</p></div><div class="mascot-stage"><img src="ui-home-cat.png" class="cat-loop" alt="Gatto animato"></div></div><div class="home-actions-ai"><button class="scan-card" type="button"><b>Scansione scontrino</b><br><span>Fotocamera + AI Vision</span></button><button class="meal-card" type="button" onclick="openMealAI()"><span class="meal-icon-wrap"><img src="ui-chef-ai-cat.png" class="meal-icon" alt="Chef AI"></span><span class="meal-copy"><b>Chef AI di casa</b><br><span>3 idee pasto usando frigo, dispensa e scadenze</span></span></button></div><div class="grid home-grid">${renderCategoryTile('frigo','Frigo','Prodotti da consumare')}${renderCategoryTile('dispensa','Dispensa','Scorte di casa')}${renderCategoryTile('altro','Altro','Prodotti vari')}</div>`;}
-        function renderStorage(cat){let items=orderProducts(state.products.filter(x=>x.category===cat));const title=cat==='frigo'?'Frigorifero':cat==='dispensa'?'Dispensa':'Altro';return `<div class="top"><div class="brand"><img src="brand-icon.png" alt=""><h1>${title}</h1></div><span class="sync">...</span></div><input id="search-storage" class="input search" placeholder="Cerca in ${title.toLowerCase()}" value="${esc(searchText)}" oninput="handleSearchInput('search-storage','searchText')">${renderDuplicateAlert(items)}${renderSections(items,'product',cat)}`;}
+function renderHome(){const house=activeProducts().length,terminated=terminatedProducts().length,exp=expiringProducts().length,expired=expiredProducts().length,cart=cartStats().open,list=shoppingStats().open;return `<div class="top"><div><h2>Ciao, Freddie! 👋</h2><div class="muted">Famiglia: <b>${esc(cfg.familyCode||'offline')}</b> · <span class="sync">...</span></div></div><div class="top-actions"><button class="icon-btn" onclick="openSettings()" title="Impostazioni">⚙️</button><button class="icon-btn logout-top" onclick="logoutFamily()" title="Esci dalla famiglia">🚪</button></div></div><section class="hero"><small>Panoramica oggi</small><h3>Gestione famiglia</h3><div class="metrics"><div class="metric"><button onclick="setView('house')"><b>${house}</b><span>In casa</span></button></div><div class="metric"><button onclick="setView('terminated')"><b>${terminated}</b><span>Articoli terminati</span></button></div><div class="metric"><button onclick="setView('expiring')"><b>${exp}</b><span>In scadenza</span></button></div><div class="metric"><button onclick="setView('expired')"><b>${expired}</b><span>Scaduti</span></button></div></div></section><div class="home-quick">${renderQuickAction('shopping','ui-lista-cat.png','Lista spesa','Da acquistare',list,'badge-shopping-home')}${renderQuickAction('cart','ui-carrello-cat.png','Lista carrello','Da sistemare',cart,'badge-cart-home')}</div><div class="mascot-card"><div><small>Schrodinger Fridge</small><h3>Controlla cosa hai, prima di comprare</h3><p class="muted" style="color:#EDE7F8">Tieni sotto controllo scorte, scadenze e lista della spesa di famiglia.</p></div><div class="mascot-stage"><img src="ui-home-cat.png" class="cat-loop" alt="Gatto animato"></div></div><div class="home-actions-ai"><button class="scan-card" type="button" onclick="openReceiptScan()"><b>Scansione scontrino</b><br><span>Foto + AI: articoli direttamente nel carrello</span></button><button class="meal-card" type="button" onclick="openMealAI()"><span class="meal-icon-wrap"><img src="ui-chef-ai-cat.png" class="meal-icon" alt="Chef AI"></span><span class="meal-copy"><b>Chef AI di casa</b><br><span>3 idee pasto usando frigo, dispensa e scadenze</span></span></button></div>${renderSavedMealBanner()}<div class="grid home-grid">${renderCategoryTile('frigo','Frigo','Prodotti da consumare')}${renderCategoryTile('dispensa','Dispensa','Scorte di casa')}${renderCategoryTile('altro','Altro','Prodotti vari')}</div>`;}
+        
+function renderSavedMealBanner(){
+      if(!savedMeal)return '';
+      const used=(savedMeal.used||[]).filter(Boolean).slice(0,4).join(' · ');
+      const steps=(savedMeal.steps||[]).filter(Boolean).slice(0,2).join(' · ');
+      return `<div class="saved-meal-banner"><div><small>Ricetta salvata</small><h3>${esc(savedMeal.title||'Ricetta consigliata')}</h3><p>${esc(used||steps||savedMeal.why||'Pronta da preparare')}</p></div><button class="icon-btn saved-close" title="Cancella ricetta salvata" onclick="clearSavedMeal()">×</button></div>`;
+    }
+    function saveMealIdea(i){
+      const m=mealIdeas[i];
+      if(!m)return toast('Ricetta non trovata');
+      savedMeal=JSON.parse(JSON.stringify(m));
+      closeAllModals();
+      render();
+      setTimeout(()=>document.querySelector('.saved-meal-banner')?.scrollIntoView({behavior:'smooth',block:'center'}),80);
+      toast('Ricetta salvata in home');
+    }
+    function clearSavedMeal(){savedMeal=null;render();toast('Ricetta rimossa');}
+    function renderStorage(cat){let items=orderProducts(state.products.filter(x=>x.category===cat));const title=cat==='frigo'?'Frigorifero':cat==='dispensa'?'Dispensa':'Altro';return `<div class="top"><div class="brand"><img src="brand-icon.png" alt=""><h1>${title}</h1></div><span class="sync">...</span></div><input id="search-storage" class="input search" placeholder="Cerca in ${title.toLowerCase()}" value="${esc(searchText)}" oninput="handleSearchInput('search-storage','searchText')">${renderDuplicateAlert(items)}${renderSections(items,'product',cat)}`;}
     function renderNoResults(q,list,cat,label){q=String(q||'').trim();const safe=esc(q);if(q)return `<div class="empty">Nessuna voce trovata.<br><button class="add-link" onclick="openAddModal('${safe}','${list}','${cat||'dispensa'}')">Aggiungi “${safe}”</button></div>`;return `<div class="empty">${label||'Nessuna voce.'} Premi + per aggiungere.</div>`;}
     function renderSections(source,kind,cat){let items=[...source];const q=searchText.trim().toLowerCase();if(q)items=items.filter(x=>itemText(x).includes(q));if(!items.length)return renderNoResults(searchText,'product',cat,'Nessuna voce');const exp=items.filter(isExpiring);const expired=items.filter(isExpired);const done=items.filter(x=>x.checked);const good=items.filter(x=>!x.checked&&!isExpiring(x)&&!isExpired(x));return `${exp.length?`<div class="section-title">In scadenza</div>${exp.map(x=>renderProductItem(x)).join('')}`:''}${good.length?`<div class="section-title">Articolo presente</div>${good.map(x=>renderProductItem(x)).join('')}`:''}${done.length?`<div class="section-title">Terminati</div>${done.map(x=>renderProductItem(x)).join('')}`:''}${expired.length?`<div class="section-title">Scaduti</div>${expired.map(x=>renderProductItem(x)).join('')}`:''}`;}
     function statusHtml(it){if(it.checked)return '<span class="status-tag done">terminato</span>';if(isExpired(it))return '<span class="status-tag expired">scaduto</span>';if(isExpiring(it)){const d=daysToExpiry(it);const label=d===0?'oggi':d===1?'1 giorno':d+' giorni';return `<span class="status-tag expiring">in scadenza · ${label}</span>`;}return '';}
@@ -185,6 +202,19 @@ function renderHome(){const house=activeProducts().length,terminated=terminatedP
         .replace(/\s+/g,' ')
         .trim();
     }
+    
+    function inferCategoryFromName(name){
+      const s=normalizeName(name);
+      if(['latte','yogurt','formaggio','mozzarella','ricotta','prosciutto','salame','mortadella','speck','uova','carne','pollo','pesce','insalata','verdura','frutta'].some(k=>s.includes(k)))return 'frigo';
+      if(['detersivo','sapone','shampoo','carta','scottex','spugna','dentifricio'].some(k=>s.includes(k)))return 'altro';
+      return 'dispensa';
+    }
+    function sameProductName(a,b){
+      const x=normalizeName(a), y=normalizeName(b);
+      if(!x||!y)return false;
+      return x===y || x.includes(y) || y.includes(x);
+    }
+
     function itemIconEmoji(name){
       const s=normalizeName(name);
       const rules=[
@@ -442,7 +472,7 @@ function openMealAI(){
       const mode=mealAiMode==='ai'
         ? '<div class="meal-ai-status ai">Gemini AI collegata: proposte generate online</div>'
         : '<div class="meal-ai-status local">Modalità locale: Gemini non collegata o non disponibile</div><div id="meal-ai-error" class="meal-ai-error"></div>';
-      box.innerHTML=mode+mealIdeas.map((m,i)=>`<article class="meal-idea"><div class="meal-head"><b>${i+1}. ${esc(m.title||'Pasto consigliato')}</b><span>${esc(selectedMood)}</span></div><p>${esc(m.why||'Proposta basata sugli articoli disponibili.')}</p>${(m.used&&m.used.length)?`<div class="meal-line"><b>Usa:</b> ${m.used.map(esc).join(', ')}</div>`:''}${(m.missing_groups&&m.missing_groups.length)?`<div class="meal-line"><b>Da aggiungere:</b> ${m.missing_groups.map(g=>esc(g.label||g.options.join(' / '))).join('; ')} <button class="add-link" onclick="openMealMissingChooser(${i})">Scegli cosa aggiungere</button></div>`:''}${(m.steps&&m.steps.length)?`<ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}</article>`).join('');
+      box.innerHTML=mode+mealIdeas.map((m,i)=>`<article class="meal-idea"><div class="meal-head"><b>${i+1}. ${esc(m.title||'Pasto consigliato')}</b><span>${esc(selectedMood)}</span></div><p>${esc(m.why||'Proposta basata sugli articoli disponibili.')}</p>${(m.used&&m.used.length)?`<div class="meal-line"><b>Usa:</b> ${m.used.map(esc).join(', ')}</div>`:''}${(m.missing_groups&&m.missing_groups.length)?`<div class="meal-line"><b>Da aggiungere:</b> ${m.missing_groups.map(g=>esc(g.label||g.options.join(' / '))).join('; ')} <button class="add-link" onclick="openMealMissingChooser(${i})">Scegli cosa aggiungere</button></div>`:''}${(m.steps&&m.steps.length)?`<ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}<div class="meal-actions"><button class="secondary" type="button" onclick="saveMealIdea(${i})">Salva ricetta</button></div></article>`).join('');
     }
     function openMealMissingChooser(i){
       const m=mealIdeas[i];
@@ -470,7 +500,78 @@ function openMealAI(){
       render();
       toast('Ingredienti aggiunti alla lista spesa');
     }
-function openSettings(){document.getElementById('supabase-url').value=cfg.supabaseUrl||DEFAULT_SUPABASE_URL;document.getElementById('supabase-key').value=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;const f=document.getElementById('settings-family');if(f)f.textContent=cfg.familyCode||'offline';document.getElementById('modal-settings').classList.add('open');renderDebug();}
+
+function openReceiptScan(){
+      closeAllModals();
+      const file=document.getElementById('receipt-file');
+      if(file)file.value='';
+      const box=document.getElementById('receipt-result');
+      if(box)box.innerHTML='<div class="empty">Carica o scatta la foto dello scontrino. L’AI riconoscerà solo gli articoli e li importerà nel carrello.</div>';
+      document.getElementById('modal-receipt').classList.add('open');
+    }
+    function fileToBase64(file){
+      return new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(String(reader.result||''));
+        reader.onerror=reject;
+        reader.readAsDataURL(file);
+      });
+    }
+    async function scanReceipt(){
+      const input=document.getElementById('receipt-file');
+      const file=input&&input.files&&input.files[0];
+      if(!file)return toast('Carica una foto dello scontrino');
+      const box=document.getElementById('receipt-result');
+      box.innerHTML='<div class="empty">Gemini sta leggendo lo scontrino...</div>';
+      try{
+        const image=await fileToBase64(file);
+        const url=(cfg.supabaseUrl||DEFAULT_SUPABASE_URL).replace(/\/+$/,'')+'/functions/v1/receipt-vision';
+        const key=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;
+        const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':key,'Authorization':'Bearer '+key},body:JSON.stringify({image,shopping:state.shoppingList.map(x=>({id:x.id,name:x.name,qty:x.qty,unit:x.unit,category:x.category}))})});
+        const text=await res.text();
+        if(!res.ok){
+          let msg=text||'Errore scansione';
+          try{const j=JSON.parse(text); msg=j.error||j.message||JSON.stringify(j).slice(0,180);}catch(_){}
+          throw new Error(msg);
+        }
+        const data=JSON.parse(text||'{}');
+        const products=Array.isArray(data.products)?data.products:[];
+        if(!products.length){box.innerHTML='<div class="empty">Nessun articolo riconosciuto. Prova una foto più nitida.</div>';return;}
+        await importReceiptProducts(products);
+        box.innerHTML=`<div class="meal-ai-status ai">Importati ${products.length} articoli nel carrello</div><div class="receipt-list">${products.map(p=>`<div>${esc(p.name||'voce')} · ${esc(String(p.qty||1))} ${esc(p.unit||'pz')}</div>`).join('')}</div>`;
+      }catch(e){
+        console.warn('Errore scansione scontrino',e);
+        box.innerHTML=`<div class="meal-ai-status local">Scansione non riuscita: ${esc(String(e&&e.message?e.message:e).slice(0,180))}</div>`;
+      }
+    }
+    async function importReceiptProducts(products){
+      const imported=[];
+      for(const p of products){
+        const name=String(p.name||'').trim();
+        if(!name)continue;
+        const match=state.shoppingList.find(x=>sameProductName(x.name,name));
+        let item;
+        if(match){
+          item=findRemove('shopping',match.id);
+          item.list_type='cart';
+          item.name=name||item.name;
+          item.qty=Number(p.qty||item.qty||1);
+          item.unit=String(p.unit||item.unit||'pz');
+          item.category=normalizeCategory(p.category||item.category||inferCategoryFromName(name));
+          item.updated_at=Date.now();
+        }else{
+          item=normalizeItem({id:newId('cart'),family_code:cfg.familyCode,list_type:'cart',name,category:normalizeCategory(p.category||inferCategoryFromName(name)),qty:Number(p.qty||1),unit:String(p.unit||'pz'),notes:'da scontrino',checked:false,added_at:Date.now(),updated_at:Date.now()});
+        }
+        state.cart.unshift(item);
+        imported.push(item);
+        await upsertOne(item);
+      }
+      saveLocal();
+      render();
+      updateNavBadges();
+      toast(`${imported.length} articoli nel carrello`);
+    }
+    function openSettings(){document.getElementById('supabase-url').value=cfg.supabaseUrl||DEFAULT_SUPABASE_URL;document.getElementById('supabase-key').value=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;const f=document.getElementById('settings-family');if(f)f.textContent=cfg.familyCode||'offline';document.getElementById('modal-settings').classList.add('open');renderDebug();}
     function saveSettings(){cfg.supabaseUrl=document.getElementById('supabase-url').value.trim()||DEFAULT_SUPABASE_URL;cfg.supabaseKey=document.getElementById('supabase-key').value.trim()||DEFAULT_SUPABASE_KEY;saveConfig();closeAllModals();initSupabase();fullSync();}
     
 
