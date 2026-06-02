@@ -1,84 +1,5 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>SchrodingerFridge</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon-192.png">
-  <meta name="theme-color" content="#7c3aed">
-  <style>
-    :root{--bg:#fffaf4;--card:#fffefb;--ink:#1e1828;--muted:#786b84;--line:#eee1dc;--purple:#7c3aed;--purple2:#f97316;--peach:#fff1e7;--mint:#ecfdf5;--dark:#16111f;--good:#059669;--bad:#dc2626;--warn:#b45309;--shadow:0 18px 48px rgba(62,38,21,.10)}
-    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 10% -10%,#fff1e7 0,transparent 32%),radial-gradient(circle at 90% 0,#eee7ff 0,transparent 28%),var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif} button,input,select,textarea{font:inherit} button{border:0;cursor:pointer;color:inherit} .hidden{display:none!important}
-    .wrap{width:min(520px,100%);margin:0 auto;min-height:100vh;padding:20px 14px 96px}.setup{min-height:100vh;display:grid;place-items:center;padding:22px}.splash{position:fixed;inset:0;z-index:120;background:#fff;display:grid;place-items:center;text-align:center;padding:28px}.splash-inner img{width:180px;height:180px;border-radius:28px;box-shadow:var(--shadow)}.loader{width:74px;height:8px;background:#eee9f7;border-radius:999px;margin:54px auto 0;overflow:hidden}.loader i{display:block;width:38%;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--purple),var(--purple2));animation:loadbar 1.15s ease-in-out infinite alternate}@keyframes loadbar{from{transform:translateX(0)}to{transform:translateX(120%)}}.card,.tile,.item,.panel{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
-    .top-nav{display:none!important}.top-inner{width:min(520px,100%);margin:0 auto;padding:8px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}.top-inner button,.bottom-nav button{border-radius:18px;padding:10px 8px;font-weight:900;background:#fff;border:1px solid var(--line)}.top-inner button.active,.bottom-nav button.active{background:#17131f;color:#fff;border-color:#17131f}
-    .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:45;background:rgba(255,250,244,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}.bottom-inner{width:min(520px,100%);margin:0 auto;padding:8px 10px;display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.bottom-nav button{font-size:12px;padding:8px 4px;position:relative}.ico{display:grid;place-items:center;min-height:24px;margin-bottom:2px}.nav-icon{width:24px;height:24px;object-fit:contain}.nav-badge{position:absolute;top:3px;right:8px;min-width:18px;height:18px;border-radius:999px;background:var(--purple);color:#fff;font-size:11px;font-weight:950;display:none;place-items:center;padding:0 5px}.nav-badge.show{display:grid}
-    h1,h2,h3,p{margin:0}.muted{color:var(--muted);font-size:14px}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}.brand{display:flex;align-items:center;gap:10px}.brand img{width:42px;height:42px;border-radius:13px}.icon-btn{width:42px;height:42px;border-radius:16px;background:#fff;border:1px solid var(--line);box-shadow:0 8px 22px rgba(31,24,40,.06)}
-    .hero{background:radial-gradient(circle at 86% 10%,rgba(249,115,22,.54),transparent 23%),radial-gradient(circle at 16% 92%,rgba(124,58,237,.42),transparent 27%),var(--dark);color:#fff;border-radius:30px;padding:20px;box-shadow:0 22px 55px rgba(31,24,40,.18);margin-bottom:16px}.hero small{text-transform:uppercase;letter-spacing:.16em;color:#d8c6ff;font-weight:900}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:12px;text-align:left}.metric button{background:transparent;color:#fff;padding:0;text-align:left}.metric b{font-size:24px;display:block}.metric span{font-size:12px;color:#d9d1e3}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.tile{text-align:left;min-height:154px;padding:18px;position:relative;overflow:hidden}.tile:after{content:'';position:absolute;right:-22px;top:-22px;width:78px;height:78px;background:linear-gradient(135deg,rgba(124,58,237,.10),rgba(249,115,22,.14));border-radius:30px;transform:rotate(18deg)}.tile h3,.tile p,.tile .emoji,.tile .tile-stats,.tile .tile-icon{position:relative;z-index:1}.emoji{font-size:30px;margin-bottom:12px}.tile-icon{width:46px;height:46px;object-fit:contain;display:block;margin-bottom:12px}.scan-card{margin-top:14px;width:100%;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;border-radius:26px;padding:18px;text-align:left;box-shadow:0 18px 42px rgba(124,58,237,.22)}
-    .fab{position:fixed;right:max(18px,calc((100vw - 520px)/2 + 18px));bottom:calc(88px + env(safe-area-inset-bottom));z-index:50;width:60px;height:60px;border-radius:22px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;font-size:32px;font-weight:900;box-shadow:0 22px 44px rgba(124,58,237,.32);display:grid;place-items:center}.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--muted);margin:12px 0 6px}.input,select,textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:18px;padding:13px 14px;outline:0}textarea{min-height:78px;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.primary,.secondary,.ghost,.danger{border-radius:18px;padding:13px 14px;font-weight:900}.primary{background:var(--purple);color:#fff}.secondary{background:#17131f;color:#fff}.ghost{background:#f4eff7}.danger{background:#fef2f2;color:var(--bad)}.pill{display:inline-flex;align-items:center;gap:6px;padding:8px 10px;background:#f4eff7;border-radius:999px;font-size:12px;font-weight:900;color:#5d5268}.chips{display:flex;gap:8px;overflow:auto;padding:2px 0 12px}.chip{border-radius:999px;padding:9px 12px;background:#fff;border:1px solid var(--line);font-weight:900;white-space:nowrap}.chip.active{background:#17131f;color:#fff}
-    .item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px;margin-bottom:10px}.item.done .item-name{text-decoration:line-through;text-decoration-thickness:2px;color:#8d8197}.thumb{width:44px;height:44px;border-radius:15px;background:#f4effb;display:grid;place-items:center;font-size:22px}.thumb img{width:30px;height:30px;object-fit:contain}.main{min-width:0}.item-name{font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.35}.actions{display:flex;gap:5px;align-items:center}.actions button,.check-btn{width:38px;height:38px;border-radius:14px;background:#f6f2f8;display:grid;place-items:center}.actions.compact button{width:30px;height:30px;border-radius:11px;font-size:13px}.item.compact{gap:8px;padding:10px}.item.compact .check-btn{width:34px;height:34px;border-radius:13px}.logout-btn{background:#fef2f2!important;color:var(--bad)!important}.mini-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.check-btn{border:2px solid #d8cfe1;background:#fff}.check-btn.on{background:#17131f;color:#fff;border-color:#17131f}.empty{border:1px dashed #d8d0df;border-radius:24px;padding:26px;text-align:center;color:var(--muted);background:rgba(255,255,255,.55)}.add-link{margin-top:12px;background:transparent;color:var(--purple);font-weight:950;text-decoration:underline;padding:0}.alert{border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:18px;padding:12px;margin:10px 0;font-size:13px;font-weight:800}.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.tools.three{grid-template-columns:1fr 1fr 1fr}.section-title{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:#8d8197;font-weight:950;margin:18px 0 10px}.search{margin:8px 0 10px}.tile-stats{display:grid;gap:5px;margin-top:10px}.tile-stat{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);background:#fff7f0;border:1px solid #f1dfd3;border-radius:999px;padding:5px 8px}.tile-stat b{color:var(--ink)}.status-tag{display:inline-flex;border-radius:999px;padding:2px 7px;background:#f4eff7;color:#5d5268;font-size:11px;font-weight:900;margin-left:4px}.status-tag.expired{background:#fef2f2;color:var(--bad)}.status-tag.expiring{background:#fffbeb;color:#92400e}.status-tag.done{background:#f1f5f9;color:#64748b}
-    .modal-overlay{position:fixed;inset:0;background:rgba(22,17,30,.44);backdrop-filter:blur(8px);display:none;align-items:flex-end;z-index:80}.modal-overlay.open{display:flex}.modal{width:100%;max-height:88vh;overflow:auto;background:#fff;border-radius:30px 30px 0 0;padding:20px 16px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -22px 55px rgba(31,24,40,.22)}.modal h3{font-size:24px;margin:4px 0 14px}.toast{position:fixed;left:18px;right:18px;bottom:calc(88px + env(safe-area-inset-bottom));max-width:484px;margin:0 auto;background:#17131f;color:#fff;border-radius:17px;padding:13px 15px;font-weight:900;z-index:100;opacity:0;transform:translateY(20px);transition:.18s;pointer-events:none}.toast.show{opacity:1;transform:translateY(0)}.sync{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;background:#f3edf7;color:var(--muted);font-size:12px;font-weight:900}.sync.online{background:#ecfdf5;color:var(--good)}.sync.error{background:#fef2f2;color:var(--bad)}.debug{font-size:12px;line-height:1.35;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;color:#51495a;white-space:pre-wrap;margin-top:12px}.qty{display:grid;grid-template-columns:50px 1fr 50px;gap:6px}.qty button{background:#f6f2f8;border-radius:16px;font-weight:950}.qty input{text-align:center}.subtle{font-size:12px;color:#8d8197}.select-panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:12px;margin:10px 0}.home-quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}.quick-btn{position:relative;display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);text-align:left}.quick-btn b{display:block;font-size:17px}.quick-meta{font-size:12px;color:var(--muted);font-weight:700}.quick-icon{width:36px;height:36px;object-fit:contain;flex:0 0 auto}.quick-badge{position:absolute;top:10px;right:10px;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:linear-gradient(135deg,var(--purple),var(--purple2));display:none;place-items:center;color:#fff;font-size:12px;font-weight:900}.quick-badge.show{display:grid}.mascot-card{margin:0 0 14px;background:linear-gradient(135deg,#17131f,#362159);color:#fff;border-radius:28px;padding:16px 18px;display:grid;grid-template-columns:1.2fr .8fr;align-items:center;gap:12px;box-shadow:0 22px 50px rgba(31,24,40,.18)}.mascot-card small{text-transform:uppercase;letter-spacing:.16em;color:#d8c6ff;font-weight:900}.mascot-stage{display:flex;justify-content:flex-end}.cat-loop{width:140px;max-width:100%;animation:catBob 2.8s ease-in-out infinite}.home-grid{margin-top:2px}.thumb-icon{width:30px;height:30px;object-fit:contain}@keyframes catBob{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-6px) rotate(-2deg)}50%{transform:translateY(0) rotate(2deg)}75%{transform:translateY(-4px) rotate(-1deg)}}
-    @media(min-width:760px){.modal-overlay{align-items:center;justify-content:center}.modal{max-width:480px;border-radius:30px;padding:22px}}
-  </style>
-</head>
-<body>
-  <section id="splash" class="splash"><div class="splash-inner"><img src="brand-icon.png" alt="SchrodingerFridge"><h1>Schrodinger Fridge</h1><p class="muted">Sai cosa hai. Eviti sprechi.<br>Risparmi di più.</p><div class="loader"><i></i></div><p class="subtle" style="margin-top:42px">Caricamento in corso...</p></div></section>
-  <nav class="top-nav hidden" id="top-nav"></nav>
 
-  <section id="setup" class="setup hidden">
-    <div class="card" style="width:min(440px,100%);padding:22px">
-      <div class="brand"><img src="brand-icon.png" alt=""><h1>SchrodingerFridge</h1></div>
-      <p class="muted" style="margin-top:10px">Inserisci il codice famiglia. Da ora viene salvato e sincronizzato sempre in MAIUSCOLO.</p>
-      <div class="label">Codice famiglia</div><input id="join-code" class="input" value="PROVA-1234" autocomplete="off">
-      <div style="height:10px"></div><button id="btn-join" class="primary" style="width:100%">Entra nella famiglia</button>
-      <div style="height:10px"></div><button id="btn-create-family" class="secondary" style="width:100%">Crea nuova famiglia</button>
-      <div style="height:10px"></div><button id="btn-offline" class="ghost" style="width:100%">Continua offline</button>
-    </div>
-  </section>
-
-  <main id="app" class="wrap hidden">
-    <div id="page"></div>
-    <button id="fab" class="fab" type="button" aria-label="Aggiungi">＋</button>
-  </main>
-
-  <nav class="bottom-nav hidden" id="bottom-nav"><div class="bottom-inner">
-    <button data-view="home"><span class="ico">🏠</span>Home</button>
-    <button data-view="frigo"><span class="ico"><img src="ui-frigo-cat.svg" class="nav-icon" alt="Frigo"></span>Frigo<span id="badge-frigo" class="nav-badge"></span></button>
-    <button data-view="dispensa"><span class="ico"><img src="ui-dispensa-cat.svg" class="nav-icon" alt="Dispensa"></span>Dispensa<span id="badge-dispensa" class="nav-badge"></span></button>
-    <button data-view="altro"><span class="ico"><img src="ui-altro-cat.svg" class="nav-icon" alt="Altro"></span>Altro<span id="badge-altro" class="nav-badge"></span></button>
-  </div></nav>
-
-  <div id="modal-add" class="modal-overlay" role="dialog" aria-modal="true"><div class="modal">
-    <h3 id="modal-title">Aggiungi voce</h3>
-    <div class="label">Nome</div><input id="item-name" class="input" placeholder="Es. Latte">
-    <div class="row"><div><div class="label">Quantità</div><div class="qty"><button id="qty-minus" type="button">−</button><input id="item-qty" class="input" inputmode="decimal" value="1"><button id="qty-plus" type="button">+</button></div></div><div><div class="label">Tipo quantità</div><select id="item-unit" class="input"><option value="pz">pz</option><option value="lt">lt</option><option value="gr">gr</option><option value="kg">kg</option><option value="ml">ml</option></select></div></div>
-    <div class="row"><div><div class="label">Destinazione</div><select id="item-list" class="input"><option value="product">Casa</option><option value="shopping">Lista spesa</option><option value="cart">Carrello</option></select></div><div><div class="label">Categoria</div><select id="item-category" class="input"><option value="frigo">Frigorifero</option><option value="dispensa">Dispensa</option><option value="altro">Altro</option></select></div></div>
-    <div class="label">Scadenza opzionale</div><input id="item-expiry" class="input" type="date">
-    <div class="label">Note</div><textarea id="item-notes" class="input" placeholder="Opzionale"></textarea>
-    <div class="row" style="margin-top:16px"><button id="btn-cancel-add" class="ghost">Annulla</button><button id="btn-save-item" class="primary">Salva</button></div>
-  </div></div>
-
-  <div id="modal-settings" class="modal-overlay" role="dialog" aria-modal="true"><div class="modal">
-    <h3>Impostazioni</h3>
-    <div class="label">Famiglia attiva</div><div class="select-panel"><b id="settings-family">—</b><div class="mini-actions"><button class="ghost" type="button" onclick="fullSync()">Ricarica Supabase</button><button class="secondary" type="button" onclick="testRemoteRead()">Test sync</button></div><div class="mini-actions"><button class="ghost" type="button" onclick="changeFamily()">Cambia famiglia</button><button class="logout-btn" type="button" onclick="logoutFamily()">🚪 Esci</button></div></div>
-    <div class="label">Project URL</div><input id="supabase-url" class="input">
-    <div class="label">Anon / publishable key</div><input id="supabase-key" class="input" placeholder="Anon key preconfigurata">
-    <p class="muted" style="margin:10px 0">La famiglia viene salvata in MAIUSCOLO. La lettura usa filtro case-insensitive per recuperare anche dati vecchi.</p>
-    <div id="debug" class="debug"></div>
-    <div class="row"><button id="btn-close-settings" class="ghost">Chiudi</button><button id="btn-save-settings" class="primary">Salva</button></div>
-  </div></div>
-
-  <div id="modal-category" class="modal-overlay" role="dialog" aria-modal="true"><div class="modal">
-    <h3 id="category-title">Sposta in categoria</h3>
-    <div class="label">Categoria</div><select id="bulk-category" class="input"><option value="frigo">Frigorifero</option><option value="dispensa">Dispensa</option><option value="altro">Altro</option></select>
-    <div class="row" style="margin-top:16px"><button id="btn-cancel-category" class="ghost">Annulla</button><button id="btn-confirm-category" class="primary">Sposta</button></div>
-  </div></div>
-
-  <div id="toast" class="toast"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-'use strict';
+    'use strict';
     const APP_VERSION='step7-home-icons-loop-shoppingcart-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
@@ -222,12 +143,5 @@ function renderHome(){const house=activeProducts().length,list=shoppingStats().o
     async function deleteRemote(id){if(cfg.offline||!sb)return;try{const {error}=await sb.from('items').delete().eq('id',id);if(error)throw error;lastError='';setSyncStatus('online');}catch(e){setLastError(e);setSyncStatus('error');}}
     async function testRemoteRead(){if(!sb)return toast('Configura Supabase');try{const {data,error}=await sb.from('items').select('id,family_code,list_type,name').ilike('family_code',cfg.familyCode).limit(50);if(error)throw error;toast(`Test sync OK: ${(data||[]).length} righe`);fullSync();}catch(e){setLastError(e);toast('Errore test sync');}}
     function setSyncStatus(status){document.querySelectorAll('.sync').forEach(el=>{el.className='sync '+(status==='online'?'online':status==='error'?'error':'');el.textContent=status==='online'?'sincronizzato':status==='error'?'errore':status==='config'?'configura Supabase':status==='sync'?'sync...':status==='offline'?'offline':status;});}
-    function renderDebug(){const box=document.getElementById('debug');if(!box)return;const key=cfg.supabaseKey?cfg.supabaseKey.slice(0,8)+'…'+cfg.supabaseKey.slice(-5):'MANCANTE';box.textContent=`VERSIONE: ${APP_VERSION}
-FAMIGLIA: ${cfg.familyCode||'offline'}
-SUPABASE URL: ${cfg.supabaseUrl}
-ANON KEY: ${key}
-LOCAL products/shopping/cart: ${state.products.length}/${state.shoppingList.length}/${state.cart.length}
-ULTIMO ERRORE: ${lastError||'nessuno'}`;}
-  </script>
-</body>
-</html>
+    function renderDebug(){const box=document.getElementById('debug');if(!box)return;const key=cfg.supabaseKey?cfg.supabaseKey.slice(0,8)+'…'+cfg.supabaseKey.slice(-5):'MANCANTE';box.textContent=`VERSIONE: ${APP_VERSION}\nFAMIGLIA: ${cfg.familyCode||'offline'}\nSUPABASE URL: ${cfg.supabaseUrl}\nANON KEY: ${key}\nLOCAL products/shopping/cart: ${state.products.length}/${state.shoppingList.length}/${state.cart.length}\nULTIMO ERRORE: ${lastError||'nessuno'}`;}
+  
