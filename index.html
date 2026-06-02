@@ -462,6 +462,34 @@ nav{
   #fab{right:calc(50% - min(240px,50vw) + 17px)}
 }
 
+
+.home-hero{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:14px;
+  padding:19px 18px;border-radius:28px;margin-bottom:14px;color:#fff;
+  background:linear-gradient(135deg,#17152b,#2a2558 60%,#7c6af5);
+  box-shadow:0 18px 40px rgba(24,22,54,.16);
+}
+.home-hero h1{font-family:'Fraunces',serif;font-size:25px;letter-spacing:-.04em;margin:7px 0 4px}
+.home-hero p{color:rgba(255,255,255,.72);font-size:13px;line-height:1.45;max-width:280px}
+.home-kicker{font-size:11px;font-weight:900;color:rgba(255,255,255,.62);letter-spacing:.05em;text-transform:uppercase}
+.hero-family{width:42px;height:42px;border-radius:16px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.12);color:#fff;font-size:18px}
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.dash-card{
+  min-height:102px;text-align:left;border:1px solid var(--border);background:#fff;border-radius:24px;
+  padding:15px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--shadow-sm);font-family:inherit;color:var(--text)
+}
+.dash-card span{width:36px;height:36px;border-radius:14px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:19px}
+.dash-card strong{font-size:15px}
+.dash-card small{font-size:12px;color:var(--text2)}
+.scan-card{
+  display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 0 14px;padding:16px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:24px;
+  box-shadow:0 14px 30px rgba(124,106,245,.28);cursor:pointer
+}
+.scan-card strong{display:block;font-size:15px}.scan-card small{display:block;color:rgba(255,255,255,.76);font-size:12px;margin-top:3px}.scan-card span{font-size:24px}
+.home-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.home-stats .stat-card{text-align:center}.home-stats .stat-num{font-size:25px}
+
 </style>
 </head>
 <body>
@@ -514,9 +542,9 @@ nav{
       </div>
     </div>
     <div class="top-tabs">
-      <div class="top-tab active" data-top="ricerca">🔍 Ricerca</div>
-      <div class="top-tab" data-top="spesa">🛍️ Spesa<span class="tbadge hidden" id="badge-spesa"></span></div>
-      <div class="top-tab" data-top="carrello">🛒 Carrello<span class="tbadge hidden" id="badge-carrello"></span></div>
+      <div class="top-tab active" data-top="ricerca">🏠 Home</div>
+      <div class="top-tab" data-top="spesa">🛒 Lista<span class="tbadge hidden" id="badge-spesa"></span></div>
+      <div class="top-tab" data-top="carrello">🧺 Carrello<span class="tbadge hidden" id="badge-carrello"></span></div>
     </div>
   </header>
   <main id="main-content"></main>
@@ -575,7 +603,8 @@ nav{
     <div class="info-card" style="font-size:11px">Chiunque inserisca questo codice vede e modifica le stesse liste in tempo reale.</div>
     <div class="btn-row">
       <button class="btn btn-ghost" onclick="closeModal('modal-family')">Chiudi</button>
-      <button class="btn btn-danger" onclick="changeFamily()">Cambia famiglia</button>
+      <button class="btn btn-ghost" onclick="debugSupabaseFamily()">Test sync</button>
+      <button class="btn btn-danger" onclick="changeFamily()">Cambia</button>
     </div>
   </div>
 </div>
@@ -1038,6 +1067,22 @@ function saveSupabaseConfig(){
   toast('☁️ Connessione a Supabase...');
   syncSmart();
 }
+async function debugSupabaseFamily(){
+  if(!cfg.sbUrl||!cfg.sbKey){toast('⚠️ Supabase non configurato');return;}
+  const code=(cfg.familyCode||document.getElementById('join-code')?.value||'').trim().toUpperCase();
+  if(!code){toast('⚠️ Nessun codice famiglia');return;}
+  try{
+    setSyncStatus('syncing');
+    await SB.healthCheck();
+    const rows=await SB.fetchAll(code);
+    toast(`🔎 Famiglia ${code}: ${Array.isArray(rows)?rows.length:'?'} righe su Supabase`,6000);
+    setSyncStatus('online');
+  }catch(e){
+    setSyncStatus('error');
+    toast('⚠️ Supabase: '+String(e.message||e).slice(0,150),7000);
+  }
+}
+
 function startApp(){
   document.getElementById('setup-screen').classList.add('hidden');
   document.getElementById('app').style.display='flex';
@@ -1260,406 +1305,63 @@ function renderCarrello(el){
 
 function renderRicerca(el){
   const sv=(el.querySelector('#search-global')||{}).value||'';
-  let html=`<div class="search-bar"><span class="search-icon">🔍</span><input id="search-global" placeholder="Cerca in tutti i prodotti..." oninput="renderMain()" value="${esc(sv)}" autocomplete="off">${sv?`<span class="search-clear" onclick="clearSearch()">✕</span>`:''}</div>`;
-  if(!sv){html+=`<div class="empty-state"><div class="empty-icon" style="opacity:.2">🔍</div><div class="empty-text" style="color:var(--text3)">Digita per cercare ovunque</div></div>`;el.innerHTML=html;const i=el.querySelector('#search-global');if(i)i.focus();return;}
+  const frigo=state.products.filter(p=>p.category==='frigo'&&!p.checked).length;
+  const dispensa=state.products.filter(p=>p.category==='dispensa'&&!p.checked).length;
+  const altro=state.products.filter(p=>p.category==='altro'&&!p.checked).length;
+  const spesa=state.shoppingList.length;
+  const cart=state.cart.filter(c=>!c.confirmed).length;
+  const exp=state.products.filter(p=>!p.checked&&p.expiry&&daysToExpiry(p.expiry)<=7).length;
+  let html=`<section class="home-hero">
+    <div>
+      <div class="home-kicker">Famiglia ${esc(cfg.familyCode||'locale')}</div>
+      <h1>Ciao, Freddie 👋</h1>
+      <p>Sai cosa hai. Eviti sprechi. Comprate solo ciò che serve.</p>
+    </div>
+    <button class="hero-family" onclick="openModal('modal-family')">👨‍👩‍👧</button>
+  </section>
+  <div class="dashboard-grid">
+    <button class="dash-card" onclick="switchBot('frigo')"><span>❄️</span><strong>Frigo</strong><small>${frigo} prodotti</small></button>
+    <button class="dash-card" onclick="switchBot('dispensa')"><span>🫙</span><strong>Dispensa</strong><small>${dispensa} prodotti</small></button>
+    <button class="dash-card" onclick="switchTop('spesa')"><span>🛒</span><strong>Lista spesa</strong><small>${spesa} elementi</small></button>
+    <button class="dash-card" onclick="switchTop('carrello')"><span>🧺</span><strong>Carrello</strong><small>${cart} da confermare</small></button>
+  </div>
+  <div class="scan-card" onclick="openCamera()">
+    <div><strong>Scansione scontrino</strong><small>Aggiungi prodotti in un attimo</small></div><span>⌗</span>
+  </div>
+  <div class="stats-row home-stats">
+    <div class="stat-card"><div class="stat-num">${frigo}</div><div class="stat-label">In frigo</div></div>
+    <div class="stat-card"><div class="stat-num">${dispensa}</div><div class="stat-label">In dispensa</div></div>
+    <div class="stat-card"><div class="stat-num">${exp}</div><div class="stat-label">In scadenza 7gg</div></div>
+  </div>
+  <div class="search-bar"><span class="search-icon">🔍</span><input id="search-global" placeholder="Cerca un prodotto..." oninput="renderMain()" value="${esc(sv)}" autocomplete="off">${sv?`<span class="search-clear" onclick="clearSearch()">✕</span>`:''}</div>`;
+
+  if(!sv){
+    const latest=[...state.products].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).slice(0,4);
+    if(latest.length){
+      html+=`<div class="section-title">Ultimi prodotti</div>`;
+      latest.forEach(p=>html+=productCard(p));
+    }
+    el.innerHTML=html;bindLongPress(el);return;
+  }
+
   const q=sv.toLowerCase(),results=[],seen=new Set();
   state.products.filter(p=>!p.checked&&p.name.toLowerCase().includes(q)).forEach(p=>{const k=p.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'home',name:p.name,where:catLabel(p.category),pid:p.id});}});
-  state.shoppingList.filter(s=>s.name.toLowerCase().includes(q)).forEach(s=>{const k=s.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:s.name,where:'🛍️ Lista Spesa'});}else{const ex=results.find(r=>r.name.toLowerCase()===k);if(ex)ex.alsoSpesa=true;}});
-  state.cart.filter(c=>c.name.toLowerCase().includes(q)).forEach(c=>{const k=c.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:c.name,where:'🛒 Carrello'});}});
+  state.shoppingList.filter(s=>s.name.toLowerCase().includes(q)).forEach(s=>{const k=s.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:s.name,where:'🛒 Lista Spesa'});}else{const ex=results.find(r=>r.name.toLowerCase()===k);if(ex)ex.alsoSpesa=true;}});
+  state.cart.filter(c=>c.name.toLowerCase().includes(q)).forEach(c=>{const k=c.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'cart',name:c.name,where:'🧺 Carrello'});}});
   state.products.filter(p=>p.checked&&p.name.toLowerCase().includes(q)).forEach(p=>{const k=p.name.toLowerCase();if(!seen.has(k)){seen.add(k);results.push({type:'history',name:p.name,where:catLabel(p.category)+' (storico)',pid:p.id});}});
   if(!results.length){
-    html+=`<div class="not-found-box"><div class="nf-icon">🤷</div><div class="nf-text">Prodotto "<strong>${esc(sv)}</strong>" non presente</div><button class="nf-add" onclick="addSearchToSpesa('${esc(sv)}')">➕ Aggiungi "${esc(sv)}" alla Lista Spesa</button></div>`;
+    html+=`<div class="not-found-box"><div class="nf-icon">🐾</div><div class="nf-text">Prodotto "<strong>${esc(sv)}</strong>" non presente</div><button class="nf-add" onclick="addSearchToSpesa('${esc(sv)}')">+ Aggiungi alla lista</button></div>`;
   }else{
     html+=`<div class="section-title">${results.length} risultat${results.length===1?'o':'i'}</div>`;
     results.forEach(r=>{
       const cls=r.type==='home'?'home':r.type==='cart'?'cart':'history';
       const icon=r.type==='home'?'🏠':r.type==='cart'?'🛒':'📋';
-      const w=r.alsoSpesa?r.where+' · 🛍️ in spesa':r.where;
-      html+=`<div class="sr-item ${cls}"><span class="sr-icon">${icon}</span><div class="sr-info"><div class="sr-name">${esc(r.name)}</div><div class="sr-where">${esc(w)}</div></div>${r.type==='history'?`<button class="sr-add-btn" onclick="addToSpesaByName('${esc(r.name)}')">+ Spesa</button>`:''}${r.type==='home'&&!r.alsoSpesa?`<button class="sr-add-btn" onclick="addToSpesaFromPid('${r.pid}')">+ Spesa</button>`:''}</div>`;
+      const w=r.alsoSpesa?r.where+' · in lista':r.where;
+      html+=`<div class="sr-item ${cls}"><span class="sr-icon">${icon}</span><div class="sr-info"><div class="sr-name">${esc(r.name)}</div><div class="sr-where">${esc(w)}</div></div>${r.type==='history'?`<button class="sr-add-btn" onclick="addToSpesaByName('${esc(r.name)}')">+ Lista</button>`:''}${r.type==='home'&&!r.alsoSpesa?`<button class="sr-add-btn" onclick="addToSpesaByName('${esc(r.name)}')">+ Lista</button>`:''}</div>`;
     });
   }
-  el.innerHTML=html;
-  const i=el.querySelector('#search-global');if(i&&sv){i.focus();i.setSelectionRange(sv.length,sv.length);}
+  el.innerHTML=html;bindLongPress(el);
 }
-
-// ═══════════════════════════════════════════
-//  PRODUCT OPS
-// ═══════════════════════════════════════════
-let editingId=null,currentQty=1,currentCat='dispensa';
-function openAdd(){
-  editingId=null;currentQty=1;currentCat=botTab&&botTab!=='storico'?botTab:'dispensa';
-  document.getElementById('modal-product-title').textContent='Aggiungi Prodotto';
-  document.getElementById('prod-name').value='';document.getElementById('prod-notes').value='';
-  document.getElementById('prod-qty-unit').value='';document.getElementById('prod-expiry').value='';
-  document.getElementById('qty-display').textContent='1';document.getElementById('btn-save-product').textContent='Aggiungi';
-  selectCat(currentCat);openModal('modal-product');setTimeout(()=>document.getElementById('prod-name').focus(),400);
-}
-function openEdit(id){
-  const p=state.products.find(x=>x.id===id);if(!p)return;
-  editingId=id;currentQty=p.qty||1;currentCat=p.category;
-  document.getElementById('modal-product-title').textContent='Modifica';
-  document.getElementById('prod-name').value=p.name;document.getElementById('prod-notes').value=p.notes||'';
-  document.getElementById('prod-qty-unit').value=p.unit||'';document.getElementById('prod-expiry').value=p.expiry||'';
-  document.getElementById('qty-display').textContent=currentQty;document.getElementById('btn-save-product').textContent='Salva Modifiche';
-  selectCat(currentCat);openModal('modal-product');
-}
-function selectCat(cat){currentCat=cat;document.querySelectorAll('.cat-btn').forEach(b=>b.classList.toggle('active',b.dataset.cat===cat));}
-function changeQty(d){currentQty=Math.max(1,currentQty+d);document.getElementById('qty-display').textContent=currentQty;}
-async function saveProduct(){
-  const name=document.getElementById('prod-name').value.trim();if(!name){toast('⚠️ Inserisci il nome');return;}
-  const unit=document.getElementById('prod-qty-unit').value.trim(),notes=document.getElementById('prod-notes').value.trim(),expiry=document.getElementById('prod-expiry').value||null;
-  if(editingId){const p=state.products.find(x=>x.id===editingId);if(p){p.name=name;p.category=currentCat;p.qty=currentQty;p.unit=unit;p.notes=notes;p.expiry=expiry;}await pushItem('product',p);toast('✅ Aggiornato');}
-  else{const item={id:uid(),name,category:currentCat,qty:currentQty,unit,notes,expiry,checked:false,originCategory:currentCat,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);toast(`✅ "${name}" aggiunto`);}
-  closeModal('modal-product');renderMain();updateBadges();updateExpiryAlert();
-}
-async function toggleCheck(id){
-  const p=state.products.find(x=>x.id===id);if(!p)return;
-  p.checked=!p.checked;p.checkedAt=p.checked?Date.now():null;
-  if(p.checked&&!state.shoppingList.find(s=>s.name.toLowerCase()===p.name.toLowerCase())){
-    const item={id:uid(),name:p.name,source:catLabel(p.category).replace(/[🧺❄️📦]/g,'').trim(),originCategory:p.category,pending:true,confirmed:false,addedAt:Date.now()};
-    state.shoppingList.push(item);await pushItem('shopping',item);
-    toast(`↩ "${p.name}" → Lista spesa (da confermare)`);
-  }else toast(p.checked?'✅ Spuntato':'↩ Ripristinato');
-  await pushItem('product',p);renderMain();updateBadges();updateExpiryAlert();
-}
-async function deleteProduct(id){
-  const p=state.products.find(x=>x.id===id);if(!p)return;
-  if(!confirm(`Eliminare "${p.name}"?`))return;
-  state.products=state.products.filter(x=>x.id!==id);await deleteItem(id);renderMain();updateBadges();updateExpiryAlert();toast('🗑 Eliminato');
-}
-async function moveProduct(id,cat){const p=state.products.find(x=>x.id===id);if(p){p.category=cat;await pushItem('product',p);renderMain();updateBadges();toast(`↪ Spostato in ${catLabel(cat)}`);}}
-
-// ═══════════════════════════════════════════
-//  SPESA OPS
-// ═══════════════════════════════════════════
-async function addToSpesaManual(){const name=prompt('Aggiungi alla lista spesa:');if(!name?.trim())return;const item={id:uid(),name:name.trim(),source:'manuale',originCategory:'dispensa',pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);renderMain();updateBadges();toast(`🛍️ "${name.trim()}" aggiunto`);}
-async function addToSpesaFromHistory(pid){const p=state.products.find(x=>x.id===pid);if(!p)return;if(state.shoppingList.find(s=>s.name.toLowerCase()===p.name.toLowerCase())){toast('⚠️ Già in lista');return;}const item={id:uid(),name:p.name,source:catLabel(p.category),originCategory:p.category,pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);renderMain();updateBadges();toast(`✅ "${p.name}" aggiunto`);}
-async function addToSpesaFromPid(pid){return addToSpesaFromHistory(pid);}
-async function addToSpesaByName(name){name=name.replace(/&amp;/g,'&');if(state.shoppingList.find(s=>s.name.toLowerCase()===name.toLowerCase())){toast('⚠️ Già in lista');return;}const item={id:uid(),name,source:'storico',originCategory:'dispensa',pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);updateBadges();toast(`🛍️ "${name}" aggiunto`);}
-async function addSearchToSpesa(name){name=name.replace(/&amp;/g,'&');const item={id:uid(),name,source:'ricerca',originCategory:'dispensa',pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);updateBadges();toast(`🛍️ "${name}" aggiunto alla lista`);}
-async function confirmSpesa(sid){const s=state.shoppingList.find(x=>x.id===sid);if(!s)return;s.pending=false;s.confirmed=true;await pushItem('shopping',s);renderMain();updateBadges();}
-async function removeSpesa(sid){state.shoppingList=state.shoppingList.filter(x=>x.id!==sid);await deleteItem(sid);renderMain();updateBadges();}
-
-// SPESA → CARRELLO (selezionando un prodotto dalla lista spesa)
-async function moveSpesaToCart(sid){
-  const s=state.shoppingList.find(x=>x.id===sid);if(!s)return;
-  // aggiungi al carrello
-  const cartItem={id:uid(),name:s.name,category:s.originCategory||'dispensa',qty:1,unit:'',expiry:s.expiry||null,confirmed:false,originCategory:s.originCategory||'dispensa',addedAt:Date.now()};
-  state.cart.push(cartItem);await pushItem('cart',cartItem);
-  // rimuovi dalla spesa
-  state.shoppingList=state.shoppingList.filter(x=>x.id!==sid);await deleteItem(sid);
-  switchTop('carrello');updateBadges();toast(`🛒 "${s.name}" → Carrello`);
-}
-
-async function buyItem(sid){
-  const s=state.shoppingList.find(x=>x.id===sid);if(!s)return;
-  const targetCat=s.originCategory||'dispensa';
-  const existing=state.products.find(p=>p.name.toLowerCase()===s.name.toLowerCase());
-  if(!existing){const item={id:uid(),name:s.name,category:targetCat,qty:1,unit:'',notes:'',expiry:s.expiry||null,checked:false,originCategory:targetCat,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);toast(`✅ "${s.name}" → ${catLabel(targetCat)}`);}
-  else{existing.checked=false;await pushItem('product',existing);toast(`✅ "${s.name}" ripristinato`);}
-  state.shoppingList=state.shoppingList.filter(x=>x.id!==sid);await deleteItem(sid);renderMain();updateBadges();updateExpiryAlert();
-}
-async function addToSpesaDirect(id){const p=state.products.find(x=>x.id===id);if(!p)return;if(state.shoppingList.find(s=>s.name.toLowerCase()===p.name.toLowerCase())){toast('⚠️ Già in lista');return;}const item={id:uid(),name:p.name,source:catLabel(p.category),originCategory:p.category,pending:false,confirmed:true,addedAt:Date.now()};state.shoppingList.push(item);await pushItem('shopping',item);updateBadges();toast(`🛍️ "${p.name}" → lista spesa`);}
-
-// ═══════════════════════════════════════════
-//  CARRELLO OPS
-// ═══════════════════════════════════════════
-function changeCartCat(cid,newCat){const c=state.cart.find(x=>x.id===cid);if(c){c.category=newCat;saveLocal();}}
-async function confirmCartItem(cid){
-  const c=state.cart.find(x=>x.id===cid);if(!c)return;
-  // Sposta direttamente nella categoria selezionata come prodotto
-  const existing=state.products.find(p=>p.name.toLowerCase()===c.name.toLowerCase());
-  if(!existing){const item={id:uid(),name:c.name,category:c.category,qty:c.qty||1,unit:c.unit||'pz',notes:'',expiry:c.expiry||null,checked:false,originCategory:c.category,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);}
-  else{existing.checked=false;existing.category=c.category;if(c.expiry)existing.expiry=c.expiry;await pushItem('product',existing);}
-  state.cart=state.cart.filter(x=>x.id!==cid);await deleteItem(cid);
-  renderMain();updateBadges();updateExpiryAlert();toast(`✅ "${c.name}" → ${catLabel(c.category)}`);
-}
-async function removeCartItem(cid){state.cart=state.cart.filter(x=>x.id!==cid);await deleteItem(cid);renderMain();updateBadges();}
-async function confirmAllCart(){
-  for(const c of state.cart){
-    if(!c.confirmed){
-      const existing=state.products.find(p=>p.name.toLowerCase()===c.name.toLowerCase());
-      if(!existing){const item={id:uid(),name:c.name,category:c.category,qty:c.qty||1,unit:c.unit||'pz',notes:'',expiry:c.expiry||null,checked:false,originCategory:c.category,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);}
-      else{existing.checked=false;existing.category=c.category;if(c.expiry)existing.expiry=c.expiry;await pushItem('product',existing);}
-      await deleteItem(c.id);
-    }
-  }
-  state.cart=[];renderMain();updateBadges();updateExpiryAlert();toast('✅ Tutti spostati nelle categorie');
-}
-async function rejectAllCart(){if(!confirm('Scartare tutti i prodotti non confermati?'))return;const toRemove=state.cart.filter(c=>!c.confirmed);for(const c of toRemove)await deleteItem(c.id);state.cart=state.cart.filter(c=>c.confirmed);renderMain();updateBadges();}
-async function moveCartToStorage(){
-  const confirmed=state.cart.filter(c=>c.confirmed);
-  for(const c of confirmed){
-    const existing=state.products.find(p=>p.name.toLowerCase()===c.name.toLowerCase());
-    if(existing){existing.qty=(existing.qty||1)+(c.qty||1);existing.checked=false;if(c.expiry)existing.expiry=c.expiry;await pushItem('product',existing);}
-    else{const item={id:uid(),name:c.name,category:c.category,qty:c.qty||1,unit:c.unit||'pz',notes:'',expiry:c.expiry||null,checked:false,originCategory:c.category,addedAt:Date.now()};state.products.push(item);await pushItem('product',item);}
-    await deleteItem(c.id);
-  }
-  state.cart=state.cart.filter(c=>!c.confirmed);renderMain();updateBadges();updateExpiryAlert();toast(`📥 ${confirmed.length} prodotti spostati`);
-}
-
-// ═══════════════════════════════════════════
-//  CTX MENU
-// ═══════════════════════════════════════════
-function showCtx(e,id){e.preventDefault?.();const p=state.products.find(x=>x.id===id);if(!p)return;
-  const cats=['dispensa','frigo','altro'].filter(c=>c!==p.category);
-  let html=`<div class="ctx-item" onclick="openEdit('${id}');closeCtx()">✏️ Modifica</div><div class="ctx-item" onclick="addToSpesaDirect('${id}');closeCtx()">🛍️ Aggiungi a spesa</div><div class="ctx-divider"></div>`;
-  cats.forEach(c=>html+=`<div class="ctx-item" onclick="moveProduct('${id}','${c}');closeCtx()">↪ Sposta in ${catLabel(c)}</div>`);
-  html+=`<div class="ctx-divider"></div><div class="ctx-item danger" onclick="deleteProduct('${id}');closeCtx()">🗑 Elimina</div>`;
-  const m=document.getElementById('ctx-menu');m.innerHTML=html;
-  const x=Math.min(e.clientX||100,window.innerWidth-185),y=Math.min(e.clientY||100,window.innerHeight-185);
-  m.style.left=x+'px';m.style.top=y+'px';m.style.display='block';document.getElementById('ctx-overlay').style.display='block';}
-function closeCtx(){document.getElementById('ctx-menu').style.display='none';document.getElementById('ctx-overlay').style.display='none';}
-
-// ═══════════════════════════════════════════
-//  CARRELLO AGGIUNTA MANUALE
-// ═══════════════════════════════════════════
-function addToCarrelloChoice(){
-  // Mostra scelta: manuale o fotocamera
-  const name=prompt('Aggiungi al carrello (nome prodotto):');
-  if(!name?.trim())return;
-  addToCarrelloManual(name.trim());
-}
-async function addToCarrelloManual(name){
-  const item={id:uid(),name,category:'dispensa',qty:1,unit:'pz',expiry:null,confirmed:false,originCategory:'dispensa',addedAt:Date.now()};
-  state.cart.push(item);await pushItem('cart',item);
-  renderMain();updateBadges();toast(`🛒 "${name}" aggiunto al carrello`);
-}
-
-// ═══════════════════════════════════════════
-//  OCR / CAMERA
-// ═══════════════════════════════════════════
-let stream=null,capturedImageData=null,scannedProducts=[],rawOcrText='';
-function setOcrMode(mode){cfg.ocrMode=mode;saveLocal();document.querySelectorAll('.mode-pill').forEach(p=>p.classList.toggle('active',p.dataset.mode===mode));document.getElementById('vision-info').style.display=mode==='vision'?'block':'none';document.getElementById('tesseract-info').style.display=mode==='tesseract'?'block':'none';}
-function setOcrProg(pct,msg){document.getElementById('ocr-pb').style.width=pct+'%';document.getElementById('ocr-loading-text').textContent=msg;}
-async function openCamera(){
-  setOcrMode(cfg.ocrMode||'vision');
-  ['camera-controls','camera-container'].forEach(id=>document.getElementById(id).style.display='block');
-  ['ocr-loading','ocr-results','api-key-prompt'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('camera-overlay').style.display='flex';
-  document.getElementById('photo-preview').style.display='none';
-  document.getElementById('camera-video').style.display='block';
-  if(cfg.ocrMode==='vision'&&(!cfg.sbUrl||!cfg.sbKey)){document.getElementById('api-key-prompt').style.display='block';document.getElementById('camera-controls').style.display='none';document.getElementById('camera-container').style.display='none';openModal('modal-camera');return;}
-  openModal('modal-camera');await startCamera();
-}
-async function startCamera(){stopStream();
-  const constraints=[{video:{facingMode:{exact:'environment'},width:{ideal:1920},height:{ideal:1440}}},{video:{facingMode:'environment'}},{video:{facingMode:'user'}},{video:true}];
-  let lastErr=null;
-  for(const c of constraints){try{stream=await navigator.mediaDevices.getUserMedia(c);const vid=document.getElementById('camera-video');vid.srcObject=stream;await new Promise(res=>{vid.onloadedmetadata=res;setTimeout(res,3000);});vid.play();return;}catch(e){lastErr=e;}}
-  closeCamera();toast(`❌ Fotocamera: ${lastErr?.message||'permesso negato'}`,5000);
-}
-function getScanFrameCrop(video){
-  const vw=video.videoWidth||640, vh=video.videoHeight||480;
-  const sw=Math.max(1,Math.round(vw*0.84));
-  const sh=Math.max(1,Math.round(vh*0.74));
-  const sx=Math.max(0,Math.round((vw-sw)/2));
-  const sy=Math.max(0,Math.round((vh-sh)/2));
-  return {sx,sy,sw,sh};
-}
-async function capturePhoto(){
-  const video=document.getElementById('camera-video'), canvas=document.getElementById('camera-canvas');
-  const crop=getScanFrameCrop(video);
-  canvas.width=crop.sw; canvas.height=crop.sh;
-  const ctx=canvas.getContext('2d',{alpha:false});
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  // Legge SOLO ciò che è dentro il riquadro di scansione, non tutto lo schermo.
-  ctx.drawImage(video,crop.sx,crop.sy,crop.sw,crop.sh,0,0,canvas.width,canvas.height);
-  capturedImageData=canvas.toDataURL('image/jpeg',.94).split(',')[1];
-  const prev=document.getElementById('photo-preview');
-  prev.src=canvas.toDataURL('image/jpeg',.94); prev.style.display='block';
-  document.getElementById('camera-video').style.display='none';
-  document.getElementById('camera-overlay').style.display='none';
-  document.getElementById('camera-controls').style.display='none';
-  stopStream();
-  document.getElementById('ocr-loading').style.display='block';
-  setOcrProg(5,'Avvio OCR...');
-  try{
-    const products=cfg.ocrMode==='vision'?await runVisionOcr(capturedImageData):await runTesseractOcr(canvas);
-    scannedProducts=products;
-    setOcrProg(100,'Completato!');
-    setTimeout(showScannedResults,300);
-  }catch(err){
-    document.getElementById('ocr-loading').style.display='none';
-    toast(`❌ ${err.message}`,5000);
-    document.getElementById('camera-controls').style.display='block';
-    document.getElementById('photo-preview').style.display='none';
-    document.getElementById('camera-container').style.display='none';
-  }
-}
-function preprocessForOcr(src,mode='binary'){
-  const proc=document.getElementById('preprocess-canvas');
-  const scale=src.width<900?2:1.5;
-  proc.width=Math.round(src.width*scale); proc.height=Math.round(src.height*scale);
-  const ctx=proc.getContext('2d',{willReadFrequently:true});
-  ctx.clearRect(0,0,proc.width,proc.height);
-  ctx.imageSmoothingEnabled=true;
-  ctx.filter='grayscale(1) contrast(1.7) brightness(1.08)';
-  ctx.drawImage(src,0,0,proc.width,proc.height);
-  ctx.filter='none';
-  if(mode==='gray')return proc;
-  const imgData=ctx.getImageData(0,0,proc.width,proc.height), d=imgData.data;
-  const gray=new Uint8ClampedArray(proc.width*proc.height);
-  for(let i=0;i<d.length;i+=4){gray[i/4]=Math.round(.299*d[i]+.587*d[i+1]+.114*d[i+2]);}
-  const block=28;
-  for(let by=0;by<proc.height;by+=block){
-    for(let bx=0;bx<proc.width;bx+=block){
-      let sum=0,count=0;
-      for(let y=by;y<Math.min(by+block,proc.height);y++)for(let x=bx;x<Math.min(bx+block,proc.width);x++){sum+=gray[y*proc.width+x];count++;}
-      const thr=Math.max(80,Math.min(225,(sum/Math.max(1,count))-10));
-      for(let y=by;y<Math.min(by+block,proc.height);y++)for(let x=bx;x<Math.min(bx+block,proc.width);x++){
-        const idx=y*proc.width+x, v=gray[idx]<thr?0:255, di=idx*4;
-        d[di]=d[di+1]=d[di+2]=v; d[di+3]=255;
-      }
-    }
-  }
-  ctx.putImageData(imgData,0,0);
-  return proc;
-}
-async function loadTesseract(){if(window.Tesseract)return;return new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';s.onload=res;s.onerror=()=>rej(new Error('Impossibile caricare Tesseract.js'));document.head.appendChild(s);});}
-async function runTesseractOcr(canvas){
-  setOcrProg(10,'Caricamento OCR...');
-  await loadTesseract();
-  const psm=(window.Tesseract&&window.Tesseract.PSM&&window.Tesseract.PSM.SINGLE_BLOCK)||6;
-  const conf={
-    logger:m=>{if(m.status==='recognizing text')setOcrProg(40+Math.round((m.progress||0)*35),'Riconoscimento: '+Math.round((m.progress||0)*100)+'%');},
-    tessedit_pageseg_mode:psm,
-    preserve_interword_spaces:'1'
-  };
-  setOcrProg(24,'Miglioro immagine...');
-  const proc=preprocessForOcr(canvas,'binary');
-  setOcrProg(40,'Leggo le voci...');
-  const first=await Tesseract.recognize(proc,'ita+eng',conf);
-  const text1=first?.data?.text||'';
-  let products=parseReceiptText(text1);
-  rawOcrText=text1;
-  // Se la lettura è scarsa, riprova con immagine grigia non binarizzata.
-  if(products.length<2){
-    setOcrProg(78,'Seconda lettura...');
-    const proc2=preprocessForOcr(canvas,'gray');
-    const second=await Tesseract.recognize(proc2,'ita+eng',conf);
-    const text2=second?.data?.text||'';
-    rawOcrText=[text1,text2].filter(Boolean).join('\n────\n');
-    products=mergeScannedProducts([...products,...parseReceiptText(text2)]);
-  }
-  setOcrProg(94,'Pulizia risultati...');
-  return products;
-}
-function normalizeOcrLine(line){return String(line||'').replace(/\u00a0/g,' ').replace(/[|¦]/g,'l').replace(/[“”]/g,'"').replace(/[‘’`]/g,"'").replace(/\s+/g,' ').trim();}
-function fixOcrWord(word){return String(word||'').replace(/0/g,'o').replace(/5/g,'s').replace(/1/g,'l').replace(/[¢©]/g,'c');}
-function titleCaseName(s){return String(s||'').split(' ').filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');}
-function mergeScannedProducts(list){
-  const out=new Map();
-  for(const p of list){
-    if(!p||!p.name)continue;
-    const key=p.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
-    if(!key||out.has(key))continue;
-    out.set(key,{...p,selected:true,tempId:p.tempId||uid()});
-  }
-  return [...out.values()];
-}
-function parseReceiptText(text){
-  const rawLines=String(text||'').split(/\n+/).map(normalizeOcrLine).filter(Boolean);
-  const skipLine=[
-    /^(totale|subtotale|tot\.?|sconto|iva|imponibile|pagato|resto|cassa|scontrino|data|ora|p\.?iva|partita|fiscale|codice|tel|fax|euro|eur|www|\.it|grazie|arrivederci|punti|carta|bancomat|contanti|pagamento|ticket|cliente|operatore|negozio|reparto)\b/i,
-    /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/,
-    /^\d{1,2}:\d{2}/,
-    /^[*\-=_#\s]+$/,
-    /^\d+[\.,]\d{2}\s*[A-Z€]?$/,
-    /^(file|modifica|visualizza|settings|offline|feedback|search|github|pages|script|prima|analisi)\b/i
-  ];
-  const blacklist=new Set(['file','modifica','visualizza','offline','prodotti','script','search','feedback','github','pages','settings','prima','analisi','h1','main','production','connect']);
-  const products=[];
-  for(const raw of rawLines){
-    if(skipLine.some(r=>r.test(raw)))continue;
-    // Rimuove importi/prezzi/codici a fine riga, ma conserva il nome prodotto.
-    let line=raw
-      .replace(/\s+[€]?\s*\d+[\.,]\d{2}\s*[A-Z]?\s*$/i,'')
-      .replace(/\s+\d{5,}\s*$/,'')
-      .replace(/\s+\d+[\.,]\d{3}\s*(kg|g|lt|l|ml)\b/ig,'')
-      .trim();
-    const qtyMatch=line.match(/^\s*(\d{1,2})\s*(?:x|×)?\s+/i);
-    const qty=qtyMatch?Math.max(1,Math.min(99,parseInt(qtyMatch[1],10)||1)):1;
-    line=line
-      .replace(/^\s*\d{1,2}\s*(?:x|×)?\s+/i,'')
-      .replace(/^[^A-Za-zÀ-ÿ]+/,'')
-      .replace(/[^A-Za-zÀ-ÿ0-9\s'’\-]/g,' ')
-      .replace(/\s{2,}/g,' ')
-      .trim();
-    if(!line)continue;
-    let words=line.split(' ').map(fixOcrWord).filter(Boolean);
-    if(words.length>5)continue;
-    const lower=words.map(w=>w.toLowerCase());
-    if(lower.some(w=>blacklist.has(w)))continue;
-    const single=words.filter(w=>w.length<=1).length;
-    const avg=words.reduce((a,w)=>a+w.length,0)/Math.max(1,words.length);
-    if(single>1)continue;
-    if(words.length>=4&&avg<3)continue;
-    const name=words.join(' ').trim();
-    const letters=(name.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
-    if(letters<3||name.length<3||name.length>34)continue;
-    if(letters/Math.max(1,name.length)<0.55)continue;
-    products.push({name:titleCaseName(name),category:guessCategory(name),qty,unit:'pz',selected:true,tempId:uid()});
-  }
-  return mergeScannedProducts(products);
-}
-function capFirst(s){return titleCaseName(s);}
-function sanitizeVisionProducts(products){
-  if(!Array.isArray(products))return [];
-  const cleaned=[];
-  for(const p of products){
-    let name=String(p?.name||'')
-      .replace(/[€$£]/g,' ')
-      .replace(/\b\d+[\.,]\d{2}\b/g,' ')
-      .replace(/\s{2,}/g,' ')
-      .trim();
-    if(!name)continue;
-    if(name.length<2||name.length>40)continue;
-    const lower=name.toLowerCase();
-    if(/^(totale|subtotale|iva|resto|pagato|cassa|data|ora|scontrino|codice|p\.?iva)\b/i.test(lower))continue;
-    const letters=(name.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
-    if(letters<2)continue;
-    let cat=['frigo','dispensa','altro'].includes(p.category)?p.category:guessCategory(name);
-    let qty=parseInt(p.qty,10);
-    if(!Number.isFinite(qty)||qty<1)qty=1;
-    cleaned.push({name:titleCaseName(name),category:cat,qty:Math.min(qty,99),unit:p.unit||'pz',selected:true,tempId:uid()});
-  }
-  return mergeScannedProducts(cleaned);
-}
-async function runVisionOcr(b64){
-  if(!cfg.sbUrl||!cfg.sbKey)throw new Error('Configura Supabase prima di usare Visione AI');
-  setOcrProg(15,'Invio immagine alla funzione OCR...');
-  const baseUrl=cfg.sbUrl.replace(/\/+$/,'');
-  const resp=await fetch(baseUrl+'/functions/v1/receipt-vision',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'apikey':cfg.sbKey,
-      'Authorization':'Bearer '+cfg.sbKey
-    },
-    body:JSON.stringify({image:b64, familyCode:cfg.familyCode||''})
-  });
-  setOcrProg(75,'Estraggo solo le voci acquistate...');
-  const data=await resp.json().catch(()=>({}));
-  if(!resp.ok)throw new Error(data.error||('OCR cloud HTTP '+resp.status));
-  rawOcrText=data.rawText||JSON.stringify(data.products||[],null,2);
-  const products=sanitizeVisionProducts(data.products||[]);
-  if(!products.length)throw new Error('Nessuna voce prodotto riconosciuta. Riprova con scontrino più vicino e ben illuminato.');
-  return products;
-}
-function showScannedResults(){document.getElementById('ocr-loading').style.display='none';document.getElementById('ocr-count').textContent=`${cfg.ocrMode==='vision'?'☁️ Visione AI':'🔒 Offline'} — ${scannedProducts.length} prodotti:`;const listEl=document.getElementById('scanned-items-list');if(!scannedProducts.length){listEl.innerHTML=`<div style="color:var(--text2);text-align:center;padding:14px">Nessun prodotto. Riprova con foto più nitida.</div>`;}else{listEl.innerHTML=scannedProducts.map((p,i)=>`<div class="scanned-item"><input type="checkbox" ${p.selected?'checked':''} onchange="scannedProducts[${i}].selected=this.checked"><span class="scanned-item-name">${esc(p.name)}${p.qty>1?' ×'+p.qty:''}</span><select onchange="scannedProducts[${i}].category=this.value"><option value="dispensa" ${p.category==='dispensa'?'selected':''}>🧺</option><option value="frigo" ${p.category==='frigo'?'selected':''}>❄️</option><option value="altro" ${p.category==='altro'?'selected':''}>📦</option></select></div>`).join('');}document.getElementById('raw-box').textContent=rawOcrText||'(nessun testo)';document.getElementById('ocr-results').style.display='block';}
-function toggleRaw(){const b=document.getElementById('raw-box');b.style.display=b.style.display==='none'?'block':'none';}
-async function addScannedProducts(){const toAdd=scannedProducts.filter(p=>p.selected);if(!toAdd.length){toast('⚠️ Seleziona almeno un prodotto');return;}for(const p of toAdd){const item={id:uid(),name:p.name,category:p.category,qty:p.qty||1,unit:p.unit||'pz',expiry:null,confirmed:false,originCategory:p.category,addedAt:Date.now()};state.cart.push(item);await pushItem('cart',item);}closeCamera();switchTop('carrello');updateBadges();toast(`🛒 ${toAdd.length} prodotti nel carrello`);}
-function retakePicture(){document.getElementById('ocr-results').style.display='none';document.getElementById('photo-preview').style.display='none';scannedProducts=[];rawOcrText='';openCamera();}
-function stopStream(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
-function closeCamera(){stopStream();closeModal('modal-camera');}
-function saveApiKeyAndContinue(){document.getElementById('api-key-prompt').style.display='none';setOcrMode('vision');startCamera();}
-
-// ═══════════════════════════════════════════
-//  SETTINGS
-// ═══════════════════════════════════════════
-function openSettings(){openModal('modal-settings');}
-function saveSettings(){saveLocal();closeModal('modal-settings');toast('✅ Salvato');}
-function confirmClearData(){if(!confirm('Cancellare TUTTI i dati locali?'))return;state.products=[];state.shoppingList=[];state.cart=[];saveLocal();closeModal('modal-settings');renderMain();updateBadges();updateExpiryAlert();toast('🗑 Dati cancellati');}
 function clearSearch(){const i=document.getElementById('search-global');if(i)i.value='';renderMain();}
 
 // ═══════════════════════════════════════════
