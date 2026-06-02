@@ -5,7 +5,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>SchrodingerFridge</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
@@ -349,81 +349,6 @@ main,#app{
   }
 }
 
-
-/* Step 27 - hard fix pagina bianca/scroll + home copy */
-html,body{
-  min-height:100%;
-  overflow-x:hidden!important;
-  overflow-y:auto!important;
-  scroll-behavior:auto!important;
-}
-body{
-  background:#fbf8f4!important;
-}
-.wrap{
-  width:min(520px,100%)!important;
-  margin:0 auto!important;
-  height:auto!important;
-  min-height:auto!important;
-  max-height:none!important;
-  overflow:visible!important;
-  padding:14px 14px calc(116px + env(safe-area-inset-bottom,0px))!important;
-  box-sizing:border-box!important;
-}
-#page{
-  min-height:auto!important;
-  display:block!important;
-}
-.hero-home{
-  margin-top:10px!important;
-  margin-bottom:14px!important;
-}
-.hero-home h2{
-  margin:6px 0 8px!important;
-  font-size:28px!important;
-  line-height:1.04!important;
-}
-.hero-home h3{
-  margin:0 0 8px!important;
-  font-size:17px!important;
-  line-height:1.25!important;
-}
-.hero-home p{
-  font-size:13px!important;
-  line-height:1.42!important;
-}
-.version-pill{
-  display:inline-block;
-  margin-top:3px;
-  padding:3px 8px;
-  border-radius:999px;
-  background:#ede9fe;
-  color:#5b21b6;
-  font-weight:900;
-  font-size:11px;
-}
-.top{
-  margin-bottom:8px!important;
-}
-.hero{
-  margin-top:0!important;
-}
-.bottom-nav{
-  position:fixed!important;
-  left:0!important;
-  right:0!important;
-  bottom:0!important;
-  z-index:80!important;
-}
-.fab{
-  position:fixed!important;
-  z-index:90!important;
-  bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
-}
-@media(min-width:700px){
-  .wrap{padding-top:18px!important}
-}
-
 </style>
 </head>
 <body>
@@ -514,18 +439,8 @@ body{
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-function forceTopScroll(){
-      try{
-        if('scrollRestoration' in history) history.scrollRestoration='manual';
-        window.scrollTo(0,0);
-        document.documentElement.scrollTop=0;
-        document.body.scrollTop=0;
-        const appEl=document.getElementById('app');
-        if(appEl) appEl.scrollTop=0;
-      }catch(e){}
-    }
 'use strict';
-    const APP_VERSION='step27-home-render-scroll-copy-fix-2026-06-02-01';
+    const APP_VERSION='step25-mobile-list-readability-fix-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
@@ -578,7 +493,7 @@ function forceTopScroll(){
     function createFamily(){const code='FAM-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();document.getElementById('join-code').value=code;enterFamily(code);toast('Nuova famiglia creata: '+code);}
     function changeFamily(){closeAllModals();resetRealtime();cfg.familyCode='';cfg.offline=false;state=emptyState();saveConfig();showSetup();}
     function logoutFamily(){changeFamily();toast('Sei uscito dalla famiglia');}
-    function setView(next){view=next;searchText='';cartSearch='';houseSearch='';selectedCart.clear();selectedHouse.clear();window.scrollTo(0,0);const appEl=document.getElementById('app');if(appEl)appEl.scrollTop=0;forceTopScroll();render();}
+    function setView(next){view=next;searchText='';cartSearch='';houseSearch='';selectedCart.clear();selectedHouse.clear();window.scrollTo(0,0);const appEl=document.getElementById('app');if(appEl)appEl.scrollTop=0;render();}
 
     
     function updateNavBadges(){
@@ -611,7 +526,7 @@ function forceTopScroll(){
 
 function render(){normalizeState();document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));const page=document.getElementById('page');
       page.innerHTML=view==='home'?renderHome():view==='frigo'?renderStorage('frigo'):view==='dispensa'?renderStorage('dispensa'):view==='altro'?renderStorage('altro'):view==='shopping'?renderShopping():view==='cart'?renderCart():view==='house'?renderHouse('all'):view==='expiring'?renderHouse('expiring'):view==='expired'?renderHouse('expired'):view==='terminated'?renderHouse('terminated'):renderHome();
-      document.getElementById('fab').style.display=['home','house','expiring','expired','terminated'].includes(view)?'none':'grid'; if(typeof updateNavBadges==='function')updateNavBadges(); renderDebug(); setSyncStatus(lastError?'error':cfg.offline?'offline':sb?'online':'config'); forceTopScroll(); setTimeout(forceTopScroll,80); setTimeout(forceTopScroll,350);
+      document.getElementById('fab').style.display=['home','house','expiring','expired','terminated'].includes(view)?'none':'grid'; if(typeof updateNavBadges==='function')updateNavBadges(); renderDebug(); setSyncStatus(lastError?'error':cfg.offline?'offline':sb?'online':'config');
       requestAnimationFrame(()=>{const appEl=document.getElementById('app'); if(appEl)appEl.scrollTop=0; window.scrollTo(0,0);});
     }
 
@@ -633,16 +548,8 @@ function shoppingStats(){return {open:countOpen(state.shoppingList), done:state.
 function cartStats(){return {open:countOpen(state.cart), done:state.cart.filter(x=>x.checked).length};}
 function renderCategoryTile(cat,title,subtitle){const st=catStats(cat);return `<button class="tile" onclick="setView('${cat}')"><img src="${iconFor(cat)}" class="tile-icon" alt="${title}"><h3>${title}</h3><p class="muted">${subtitle}</p><div class="tile-stats">${statLine('articoli presenti',st.presenti)}${statLine('articoli terminati',st.terminati)}${statLine('in scadenza / scaduti',st.expiring+' / '+st.expired)}</div></button>`;}
 function renderQuickAction(viewName, iconPath, title, subtitle, count, badgeId){return `<button class="quick-btn" onclick="setView('${viewName}')"><img src="${iconPath}" class="quick-icon" alt="${title}"><div><b>${title}</b><div class="quick-meta">${subtitle}</div></div><span id="${badgeId}" class="quick-badge ${count>0?'show':''}">${count}</span></button>`;}
-function renderHome(){
-      const house=activeProducts().length,terminated=terminatedProducts().length,exp=expiringProducts().length,expired=expiredProducts().length,cart=cartStats().open,list=shoppingStats().open;
-      return `<div class="top"><div><div class="muted">Famiglia: <b>${esc(cfg.familyCode||'offline')}</b> · <span class="sync">...</span><br><span class="version-pill">Step 27 Fix</span></div></div><div class="top-actions"><button class="icon-btn" onclick="openSettings()" title="Impostazioni">⚙️</button><button class="icon-btn logout-top" onclick="logoutFamily()" title="Esci dalla famiglia">🚪</button></div></div>
-      <div class="mascot-card hero-home"><div><small>Schrodinger Fridge</small><h2>Ciao, Umano! 👋</h2><h3>Finché non apri il frigo, è contemporaneamente pieno o vuoto.</h3><p class="muted" style="color:#EDE7F8">Usa il gatto di Schrödinger per tracciare le tue riserve e sapere sempre cosa hai davvero in casa.</p></div><div class="mascot-stage"><img src="ui-home-cat.png" class="cat-loop" alt="Gatto animato"></div></div>
-      <section class="hero"><small>Panoramica oggi</small><h3>Gestione famiglia</h3><div class="metrics"><div class="metric"><button onclick="setView('house')"><b>${house}</b><span>In casa</span></button></div><div class="metric"><button onclick="setView('terminated')"><b>${terminated}</b><span>Articoli terminati</span></button></div><div class="metric"><button onclick="setView('expiring')"><b>${exp}</b><span>In scadenza</span></button></div><div class="metric"><button onclick="setView('expired')"><b>${expired}</b><span>Scaduti</span></button></div></div></section>
-      <div class="home-quick">${renderQuickAction('shopping','ui-lista-cat.png','Lista spesa','Da acquistare',list,'badge-shopping-home')}${renderQuickAction('cart','ui-carrello-cat.png','Lista carrello','Da sistemare',cart,'badge-cart-home')}</div>
-      <div class="home-actions-ai"><button class="scan-card" type="button" onclick="openReceiptScan()"><b>Scansione scontrino</b><br><span>Foto + AI: articoli direttamente nel carrello</span></button><button class="meal-card" type="button" onclick="openMealAI()"><span class="meal-icon-wrap"><img src="ui-chef-ai-cat.png" class="meal-icon" alt="Chef AI"></span><span class="meal-copy"><b>Chef AI di casa</b><br><span>Ricette con quantità usando ciò che hai già</span></span></button></div>${renderSavedMealBanner()}
-      <div class="grid home-grid">${renderCategoryTile('frigo','Frigo','Prodotti da consumare')}${renderCategoryTile('dispensa','Dispensa','Scorte di casa')}${renderCategoryTile('altro','Altro','Prodotti vari')}</div>`;
-    }
-
+function renderHome(){const house=activeProducts().length,terminated=terminatedProducts().length,exp=expiringProducts().length,expired=expiredProducts().length,cart=cartStats().open,list=shoppingStats().open;return `<div class="top"><div><h2>Ciao, Freddie! 👋</h2><div class="muted">Famiglia: <b>${esc(cfg.familyCode||'offline')}</b> · <span class="sync">...</span><br><span class="version-pill">Step 25 Mobile</span></div></div><div class="top-actions"><button class="icon-btn" onclick="openSettings()" title="Impostazioni">⚙️</button><button class="icon-btn logout-top" onclick="logoutFamily()" title="Esci dalla famiglia">🚪</button></div></div><section class="hero"><small>Panoramica oggi</small><h3>Gestione famiglia</h3><div class="metrics"><div class="metric"><button onclick="setView('house')"><b>${house}</b><span>In casa</span></button></div><div class="metric"><button onclick="setView('terminated')"><b>${terminated}</b><span>Articoli terminati</span></button></div><div class="metric"><button onclick="setView('expiring')"><b>${exp}</b><span>In scadenza</span></button></div><div class="metric"><button onclick="setView('expired')"><b>${expired}</b><span>Scaduti</span></button></div></div></section><div class="home-quick">${renderQuickAction('shopping','ui-lista-cat.png','Lista spesa','Da acquistare',list,'badge-shopping-home')}${renderQuickAction('cart','ui-carrello-cat.png','Lista carrello','Da sistemare',cart,'badge-cart-home')}</div><div class="mascot-card"><div><small>Schrodinger Fridge</small><h3>Controlla cosa hai, prima di comprare</h3><p class="muted" style="color:#EDE7F8">Tieni sotto controllo scorte, scadenze e lista della spesa di famiglia.</p></div><div class="mascot-stage"><img src="ui-home-cat.png" class="cat-loop" alt="Gatto animato"></div></div><div class="home-actions-ai"><button class="scan-card" type="button" onclick="openReceiptScan()"><b>Scansione scontrino</b><br><span>Foto + AI: articoli direttamente nel carrello</span></button><button class="meal-card" type="button" onclick="openMealAI()"><span class="meal-icon-wrap"><img src="ui-chef-ai-cat.png" class="meal-icon" alt="Chef AI"></span><span class="meal-copy"><b>Chef AI di casa</b><br><span>Ricette con quantità usando ciò che hai già</span></span></button></div>${renderSavedMealBanner()}<div class="grid home-grid">${renderCategoryTile('frigo','Frigo','Prodotti da consumare')}${renderCategoryTile('dispensa','Dispensa','Scorte di casa')}${renderCategoryTile('altro','Altro','Prodotti vari')}</div>`;}
+        
 function renderSavedMealBanner(){
       if(!savedMeal)return '';
       const ing=(savedMeal.ingredients||[]).map(ingredientDisplay).filter(Boolean).slice(0,5).join(' · ');
