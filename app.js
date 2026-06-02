@@ -1,5 +1,5 @@
 'use strict';
-    const APP_VERSION='step22-saved-recipe-banner-chef-copy-fix-2026-06-02-01';
+    const APP_VERSION='step23-android-layout-twa-safearea-fix-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';

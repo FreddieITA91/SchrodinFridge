@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <title>SchrodingerFridge</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
@@ -125,6 +125,69 @@
 .saved-meal-banner{width:100%;box-sizing:border-box}
 .saved-meal-banner .saved-close{background:rgba(255,255,255,.12)!important;color:#fff!important;border-color:rgba(255,255,255,.18)!important;flex:0 0 auto}
 
+
+/* Step 23 - Android/TWA layout fix */
+:root{
+  --app-vh:100dvh;
+  --bottom-nav-h:88px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{
+  width:100%;
+  min-height:100%;
+  overscroll-behavior:none;
+}
+body{
+  margin:0;
+  overflow:hidden;
+  background:var(--bg,#fbf8f4);
+}
+#app,.app,.shell,.screen,main{
+  min-height:0;
+}
+main,#app{
+  height:var(--app-vh);
+  max-height:var(--app-vh);
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:calc(var(--bottom-nav-h) + var(--safe-bottom) + 28px)!important;
+  box-sizing:border-box;
+}
+.bottom-nav,.tabbar,.nav-bottom{
+  position:fixed!important;
+  left:0!important;
+  right:0!important;
+  bottom:0!important;
+  z-index:80!important;
+  padding-bottom:max(10px,var(--safe-bottom))!important;
+  box-sizing:border-box!important;
+  background:rgba(255,250,246,.96)!important;
+  backdrop-filter:blur(14px);
+}
+.fab,.add-fab,#fab{
+  position:fixed!important;
+  right:18px!important;
+  bottom:calc(var(--bottom-nav-h) + var(--safe-bottom) + 18px)!important;
+  z-index:90!important;
+}
+.top,.hero,.mascot-card,.home-actions-ai,.saved-meal-banner,.home-grid{
+  position:relative;
+  z-index:1;
+}
+.top{
+  padding-top:max(12px,var(--safe-top))!important;
+}
+@media(max-width:520px){
+  body{font-size:15px}
+  main,#app{padding-left:14px!important;padding-right:14px!important}
+  .top h1,.top h2{font-size:22px!important}
+  .hero{margin-top:8px!important}
+  .home-actions-ai{grid-template-columns:1fr!important;gap:12px!important}
+  .home-grid{grid-template-columns:1fr 1fr!important;gap:12px!important}
+  .mascot-card{margin-top:12px!important}
+}
+
 </style>
 </head>
 <body>
@@ -216,7 +279,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
 'use strict';
-    const APP_VERSION='step22-saved-recipe-banner-chef-copy-fix-2026-06-02-01';
+    const APP_VERSION='step23-android-layout-twa-safearea-fix-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
