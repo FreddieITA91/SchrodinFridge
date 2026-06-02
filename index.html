@@ -1372,13 +1372,13 @@ async function addScannedProducts(){const toAdd=scannedProducts.filter(p=>p.sele
 function retakePicture(){document.getElementById('ocr-results').style.display='none';document.getElementById('photo-preview').style.display='none';scannedProducts=[];rawOcrText='';openCamera();}
 function stopStream(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
 function closeCamera(){stopStream();closeModal('modal-camera');}
-function saveApiKeyAndContinue(){setOcrMode('vision');startCamera();}cfg.apiKey=key;saveLocal();document.getElementById('api-key-prompt').style.display='none';document.getElementById('camera-container').style.display='block';startCamera();}
+function saveApiKeyAndContinue(){document.getElementById('api-key-prompt').style.display='none';setOcrMode('vision');startCamera();}
 
 // ═══════════════════════════════════════════
 //  SETTINGS
 // ═══════════════════════════════════════════
 function openSettings(){openModal('modal-settings');}
-function saveSettings(){cfg.apiKey=document.getElementById('settings-api-key').value.trim();saveLocal();closeModal('modal-settings');toast('✅ Salvato');}
+function saveSettings(){saveLocal();closeModal('modal-settings');toast('✅ Salvato');}
 function confirmClearData(){if(!confirm('Cancellare TUTTI i dati locali?'))return;state.products=[];state.shoppingList=[];state.cart=[];saveLocal();closeModal('modal-settings');renderMain();updateBadges();updateExpiryAlert();toast('🗑 Dati cancellati');}
 function clearSearch(){const i=document.getElementById('search-global');if(i)i.value='';renderMain();}
 
@@ -1399,7 +1399,7 @@ function injectManifest(){}
 // ═══════════════════════════════════════════
 function init(){
   loadLocal();initNav();
-  setOcrMode(cfg.ocrMode||'tesseract');
+  setOcrMode(cfg.ocrMode||'vision');
   document.getElementById('btn-scan').addEventListener('click',openCamera);
   document.getElementById('btn-settings').addEventListener('click',openSettings);
   document.getElementById('btn-family').addEventListener('click',()=>{document.getElementById('family-code-display').textContent=cfg.familyCode||'—';openModal('modal-family');});

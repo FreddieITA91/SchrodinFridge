@@ -1,5 +1,4 @@
 {
-  "id": "/SchrodinFridge/",
   "name": "SchrodingerFridge",
   "short_name": "SchrodFridge",
   "description": "Gestione dispensa, frigo e lista della spesa con OCR scontrini",
@@ -24,5 +23,9 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["food", "lifestyle", "utilities"]
+  "categories": [
+    "food",
+    "lifestyle",
+    "utilities"
+  ]
 }
