@@ -1,6 +1,5 @@
--- SchrodingerFridge - setup Supabase completo
+-- SchrodingerFridge - setup Supabase idempotente
 -- Esegui tutto in Supabase > SQL Editor.
--- L'app statica NON può creare tabelle da sola: questa query crea tabella, RLS, policy e realtime.
 
 create table if not exists public.items (
   id text primary key,
@@ -35,7 +34,7 @@ drop policy if exists "public anon insert items" on public.items;
 drop policy if exists "public anon update items" on public.items;
 drop policy if exists "public anon delete items" on public.items;
 
--- App senza login: allow anon. La separazione è per family_code, non per utenti autenticati.
+-- App senza login: la separazione è gestita dal family_code usato dall'app.
 create policy "public anon read items"
 on public.items for select
 to anon
