@@ -1,5 +1,5 @@
 'use strict';
-    const APP_VERSION='step10-supabasejs-sync-search-stable-2026-06-02-01';
+    const APP_VERSION='step11-sync-settings-search-stable-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
@@ -14,14 +14,17 @@
     function normalizeFamilyCode(v){return String(v||'').trim().toUpperCase();}
     function normalizeCategory(v){v=String(v||'dispensa').toLowerCase(); return ['frigo','dispensa','altro'].includes(v)?v:'dispensa';}
     function safeJson(raw,fallback){try{return JSON.parse(raw)||fallback}catch{return fallback}}
+    function cleanUrl(v){v=String(v||'').trim().replace(/^['"]|['"]$/g,'');return v.replace(/\/+$/,'');}
+    function cleanKey(v){return String(v||'').trim().replace(/^['"]|['"]$/g,'').replace(/\s+/g,'');}
+    function hasSupabaseConfig(){return !!(cleanUrl(cfg.supabaseUrl)&&cleanKey(cfg.supabaseKey));}
     function stateKey(){return 'sf_step5_state_'+(cfg.familyCode||'OFFLINE');}
     function newId(prefix='it'){return prefix+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)}
     function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
     function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2500)}
     function setLastError(err){lastError=err?String(err.message||err):'';console.warn(lastError);renderDebug();}
 
-    function loadConfig(){cfg={...cfg,...safeJson(localStorage.getItem(CFG_KEY),{})};cfg.familyCode=normalizeFamilyCode(cfg.familyCode);cfg.supabaseUrl=String(cfg.supabaseUrl||DEFAULT_SUPABASE_URL).trim();cfg.supabaseKey=String(cfg.supabaseKey||DEFAULT_SUPABASE_KEY).trim(); if(!cfg.supabaseKey) cfg.supabaseKey=DEFAULT_SUPABASE_KEY;}
-    function saveConfig(){cfg.familyCode=normalizeFamilyCode(cfg.familyCode);localStorage.setItem(CFG_KEY,JSON.stringify(cfg));}
+    function loadConfig(){cfg={...cfg,...safeJson(localStorage.getItem(CFG_KEY),{})};cfg.familyCode=normalizeFamilyCode(cfg.familyCode);cfg.supabaseUrl=cleanUrl(cfg.supabaseUrl||DEFAULT_SUPABASE_URL);cfg.supabaseKey=cleanKey(cfg.supabaseKey||DEFAULT_SUPABASE_KEY); if(!cfg.supabaseKey) cfg.supabaseKey=DEFAULT_SUPABASE_KEY;}
+    function saveConfig(){cfg.familyCode=normalizeFamilyCode(cfg.familyCode);cfg.supabaseUrl=cleanUrl(cfg.supabaseUrl||DEFAULT_SUPABASE_URL);cfg.supabaseKey=cleanKey(cfg.supabaseKey||DEFAULT_SUPABASE_KEY);localStorage.setItem(CFG_KEY,JSON.stringify(cfg));}
     function loadLocal(){state=safeJson(localStorage.getItem(stateKey()),emptyState());normalizeState();}
     function saveLocal(markMutation=true){normalizeState();if(markMutation)localMutationStamp=Date.now();localStorage.setItem(stateKey(),JSON.stringify(state));saveConfig();}
 
@@ -93,16 +96,20 @@ function renderHome(){const house=activeProducts().length,list=shoppingStats().o
       if(varName==='cartSearch')cartSearch=el.value;
       else if(varName==='houseSearch')houseSearch=el.value;
       else searchText=el.value;
-      const start=typeof el.selectionStart==='number'?el.selectionStart:null;
-      const end=typeof el.selectionEnd==='number'?el.selectionEnd:null;
-      render();
-      requestAnimationFrame(()=>{
-        const n=document.getElementById(id);
-        if(n){
-          n.focus({preventScroll:true});
-          if(start!==null&&typeof n.setSelectionRange==='function')n.setSelectionRange(start,end);
-        }
-      });
+      clearTimeout(searchRenderTimer);
+      searchRenderTimer=setTimeout(()=>{
+        const active=document.activeElement&&document.activeElement.id===id;
+        const start=el&&typeof el.selectionStart==='number'?el.selectionStart:null;
+        const end=el&&typeof el.selectionEnd==='number'?el.selectionEnd:null;
+        render();
+        if(active)requestAnimationFrame(()=>{
+          const n=document.getElementById(id);
+          if(n){
+            n.focus({preventScroll:true});
+            if(start!==null&&typeof n.setSelectionRange==='function')n.setSelectionRange(start,end);
+          }
+        });
+      },180);
     }
     function rerenderKeepFocus(id){const el=document.getElementById(id);const start=el&&typeof el.selectionStart==='number'?el.selectionStart:null;const end=el&&typeof el.selectionEnd==='number'?el.selectionEnd:null;render();requestAnimationFrame(()=>{const n=document.getElementById(id);if(n){n.focus();if(start!==null)n.setSelectionRange(start,end);}});}
 
@@ -149,13 +156,30 @@ function renderHome(){const house=activeProducts().length,list=shoppingStats().o
     async function deleteMany(kind,ids){const key=kind==='shopping'?'shoppingList':kind==='cart'?'cart':'products';const set=new Set(ids);state[key]=state[key].filter(x=>!set.has(x.id));ids.forEach(id=>{selectedCart.delete(id);selectedHouse.delete(id)});saveLocal();render();for(const id of ids)await deleteRemote(id);toast(ids.length===1?'Voce cancellata':`${ids.length} voci cancellate`);}
 
     function openSettings(){document.getElementById('supabase-url').value=cfg.supabaseUrl||DEFAULT_SUPABASE_URL;document.getElementById('supabase-key').value=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;const f=document.getElementById('settings-family');if(f)f.textContent=cfg.familyCode||'offline';document.getElementById('modal-settings').classList.add('open');renderDebug();}
-    function saveSettings(){cfg.supabaseUrl=document.getElementById('supabase-url').value.trim()||DEFAULT_SUPABASE_URL;cfg.supabaseKey=document.getElementById('supabase-key').value.trim()||DEFAULT_SUPABASE_KEY;saveConfig();closeAllModals();initSupabase();fullSync();}
-    
+    async function saveSettings(){
+      cfg.supabaseUrl=cleanUrl(document.getElementById('supabase-url').value||DEFAULT_SUPABASE_URL);
+      cfg.supabaseKey=cleanKey(document.getElementById('supabase-key').value||DEFAULT_SUPABASE_KEY);
+      cfg.offline=false;
+      saveConfig();
+      lastError='';
+      initSupabase();
+      const ok=await fullSync({silent:false});
+      renderDebug();
+      if(ok){closeAllModals();toast('Impostazioni salvate e sync OK');}
+      else{toast('Impostazioni salvate, ma sync non riuscita: controlla il debug');openSettings();}
+    }
 
     function initSupabase(){
       resetRealtime();
-      if(cfg.offline||!cfg.supabaseUrl||!cfg.supabaseKey||!window.supabase){
+      cfg.supabaseUrl=cleanUrl(cfg.supabaseUrl||DEFAULT_SUPABASE_URL);
+      cfg.supabaseKey=cleanKey(cfg.supabaseKey||DEFAULT_SUPABASE_KEY);
+      if(cfg.offline||!hasSupabaseConfig()){
         setSyncStatus(cfg.offline?'offline':'config');
+        return;
+      }
+      if(!window.supabase){
+        sb=null;
+        setSyncStatus('online');
         return;
       }
       try{
@@ -163,7 +187,11 @@ function renderHome(){const house=activeProducts().length,list=shoppingStats().o
         subscribeRealtime();
         lastError='';
         setSyncStatus('online');
-      }catch(e){setLastError(e);setSyncStatus('error');}
+      }catch(e){
+        sb=null;
+        setLastError(e);
+        setSyncStatus('error');
+      }
     }
     function resetRealtime(){if(channel&&sb)try{sb.removeChannel(channel)}catch{} channel=null;sb=null;}
     function subscribeRealtime(){
@@ -174,60 +202,121 @@ function renderHome(){const house=activeProducts().length,list=shoppingStats().o
           if(row&&normalizeFamilyCode(row.family_code)===cfg.familyCode)fullSync();
         }).subscribe();
     }
-    function rowFromItem(it){it=normalizeItem(it);return{id:it.id,family_code:cfg.familyCode,list_type:it.list_type,name:it.name,category:it.category,qty:Math.max(0,Math.round(Number(it.qty)||1)),unit:it.unit||'pz',notes:it.notes||'',checked:!!it.checked,confirmed:!!it.confirmed,origin_category:it.origin_category||it.category,added_at:it.added_at||Date.now(),checked_at:it.checked_at||null,updated_at:Date.now(),expiry:it.expiry||null};}
-    function applyRows(rows){
-      state=emptyState();
-      (rows||[]).forEach(r=>{const it=normalizeItem(r); if(it.list_type==='shopping')state.shoppingList.push(it);else if(it.list_type==='cart')state.cart.push(it);else state.products.push(it);});
-      saveLocal(false);render();
+    
+function restHeaders(extra={}){
+      const key=cleanKey(cfg.supabaseKey||DEFAULT_SUPABASE_KEY);
+      return {
+        apikey:key,
+        Authorization:'Bearer '+key,
+        'Content-Type':'application/json',
+        ...extra
+      };
     }
-    async function fullSync(){
-      normalizeState();
-      if(cfg.offline){setSyncStatus('offline');return;}
-      if(!sb){initSupabase();}
-      if(!sb){setSyncStatus('config');return;}
-      setSyncStatus('sync');
-      try{
-        const {data,error}=await sb.from('items').select('*').ilike('family_code',cfg.familyCode).order('added_at',{ascending:false});
-        if(error)throw error;
-        applyRows(data||[]);
-        lastError='';
-        setSyncStatus('online');
-      }catch(e){setLastError(e);setSyncStatus('error');}
-      finally{renderDebug();}
+    async function restRequest(path, options={}){
+      const url=cleanUrl(cfg.supabaseUrl||DEFAULT_SUPABASE_URL)+'/rest/v1/'+path;
+      const res=await fetch(url,{...options,headers:{...restHeaders(options.headers||{})}});
+      const text=await res.text();
+      if(!res.ok){
+        let msg=text;
+        try{const j=JSON.parse(text);msg=j.message||j.error||text;}catch{}
+        throw new Error(`REST ${res.status}: ${msg}`);
+      }
+      if(!text)return null;
+      try{return JSON.parse(text);}catch{return text;}
+    }
+    async function selectRowsRest(){
+      const fam=encodeURIComponent(cfg.familyCode||'');
+      return await restRequest(`items?select=*&family_code=ilike.${fam}&order=added_at.desc`,{method:'GET'});
     }
     async function upsertOne(item){
-      if(cfg.offline)return;
-      if(!sb){initSupabase();}
-      if(!sb)return;
+      if(cfg.offline)return false;
+      cfg.supabaseUrl=cleanUrl(cfg.supabaseUrl||DEFAULT_SUPABASE_URL);
+      cfg.supabaseKey=cleanKey(cfg.supabaseKey||DEFAULT_SUPABASE_KEY);
+      if(!hasSupabaseConfig()){setSyncStatus('config');return false;}
+      if(!sb&&window.supabase)initSupabase();
       try{
-        const {error}=await sb.from('items').upsert(rowFromItem(item),{onConflict:'id'});
-        if(error)throw error;
+        if(sb){
+          const {error}=await sb.from('items').upsert(rowFromItem(item),{onConflict:'id'});
+          if(error)throw error;
+        }else{
+          await upsertOneRest(item);
+        }
         lastError='';
         setSyncStatus('online');
-      }catch(e){setLastError(e);setSyncStatus('error');}
-      finally{renderDebug();}
+        renderDebug();
+        return true;
+      }catch(e){
+        try{
+          await upsertOneRest(item);
+          lastError='';
+          setSyncStatus('online');
+          renderDebug();
+          return true;
+        }catch(e2){
+          setLastError(e2||e);
+          setSyncStatus('error');
+          renderDebug();
+          return false;
+        }
+      }
     }
     async function deleteRemote(id){
-      if(cfg.offline)return;
-      if(!sb){initSupabase();}
-      if(!sb)return;
+      if(cfg.offline)return false;
+      cfg.supabaseUrl=cleanUrl(cfg.supabaseUrl||DEFAULT_SUPABASE_URL);
+      cfg.supabaseKey=cleanKey(cfg.supabaseKey||DEFAULT_SUPABASE_KEY);
+      if(!hasSupabaseConfig()){setSyncStatus('config');return false;}
+      if(!sb&&window.supabase)initSupabase();
       try{
-        const {error}=await sb.from('items').delete().eq('id',id);
-        if(error)throw error;
+        if(sb){
+          const {error}=await sb.from('items').delete().eq('id',id);
+          if(error)throw error;
+        }else{
+          await deleteRemoteRest(id);
+        }
         lastError='';
         setSyncStatus('online');
-      }catch(e){setLastError(e);setSyncStatus('error');}
-      finally{renderDebug();}
+        renderDebug();
+        return true;
+      }catch(e){
+        try{
+          await deleteRemoteRest(id);
+          lastError='';
+          setSyncStatus('online');
+          renderDebug();
+          return true;
+        }catch(e2){
+          setLastError(e2||e);
+          setSyncStatus('error');
+          renderDebug();
+          return false;
+        }
+      }
     }
     async function testRemoteRead(){
-      if(!sb){initSupabase();}
-      if(!sb)return toast('Configura Supabase');
+      cfg.supabaseUrl=cleanUrl(cfg.supabaseUrl||DEFAULT_SUPABASE_URL);
+      cfg.supabaseKey=cleanKey(cfg.supabaseKey||DEFAULT_SUPABASE_KEY);
+      if(!hasSupabaseConfig())return toast('Configura Supabase');
       try{
-        const {data,error}=await sb.from('items').select('id,family_code,list_type,name').ilike('family_code',cfg.familyCode).limit(50);
-        if(error)throw error;
+        let data=null;
+        if(sb){
+          const res=await sb.from('items').select('id,family_code,list_type,name').ilike('family_code',cfg.familyCode).limit(50);
+          if(res.error)throw res.error;
+          data=res.data||[];
+        }else{
+          data=await restRequest(`items?select=id,family_code,list_type,name&family_code=ilike.${encodeURIComponent(cfg.familyCode)}&limit=50`,{method:'GET'});
+        }
         toast(`Test sync OK: ${(data||[]).length} righe`);
         fullSync();
-      }catch(e){setLastError(e);toast('Errore test sync');}
+      }catch(e){
+        try{
+          const data=await restRequest(`items?select=id,family_code,list_type,name&family_code=ilike.${encodeURIComponent(cfg.familyCode)}&limit=50`,{method:'GET'});
+          toast(`Test sync OK: ${(data||[]).length} righe`);
+          fullSync();
+        }catch(e2){
+          setLastError(e2||e);
+          toast('Errore test sync: vedi debug');
+        }
+      }
     }
     function setSyncStatus(status){document.querySelectorAll('.sync').forEach(el=>{el.className='sync '+(status==='online'?'online':status==='error'?'error':'');el.textContent=status==='online'?'sincronizzato':status==='error'?'errore':status==='config'?'configura Supabase':status==='sync'?'sync...':status==='offline'?'offline':status;});}
     function renderDebug(){const box=document.getElementById('debug');if(!box)return;const key=cfg.supabaseKey?cfg.supabaseKey.slice(0,8)+'…'+cfg.supabaseKey.slice(-5):'MANCANTE';box.textContent=`VERSIONE: ${APP_VERSION}
