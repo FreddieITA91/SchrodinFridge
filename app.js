@@ -1,12 +1,12 @@
 'use strict';
-    const APP_VERSION='step17-ai-meal-mood-planner-2026-06-02-01';
+    const APP_VERSION='step18-chef-ai-banner-options-fix-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
     let cfg={familyCode:'',supabaseUrl:DEFAULT_SUPABASE_URL,supabaseKey:DEFAULT_SUPABASE_KEY,offline:false};
     let state=emptyState(), view='home', sb=null, channel=null, lastError='', searchText='', cartSearch='', houseSearch='';
     let selectedCart=new Set(), selectedHouse=new Set(), pendingCategoryAction=null, editingKind=null, editingId=null;
-    let selectedMood='', mealIdeas=[];
+    let selectedMood='', mealIdeas=[], pendingMealOptions=[];
     let localMutationStamp=0, syncRunning=false, searchRenderTimer=null;
 
     function emptyState(){return{products:[],shoppingList:[],cart:[]};}
@@ -105,7 +105,7 @@ function shoppingStats(){return {open:countOpen(state.shoppingList), done:state.
 function cartStats(){return {open:countOpen(state.cart), done:state.cart.filter(x=>x.checked).length};}
 function renderCategoryTile(cat,title,subtitle){const st=catStats(cat);return `<button class="tile" onclick="setView('${cat}')"><img src="${iconFor(cat)}" class="tile-icon" alt="${title}"><h3>${title}</h3><p class="muted">${subtitle}</p><div class="tile-stats">${statLine('articoli presenti',st.presenti)}${statLine('articoli terminati',st.terminati)}${statLine('in scadenza / scaduti',st.expiring+' / '+st.expired)}</div></button>`;}
 function renderQuickAction(viewName, iconPath, title, subtitle, count, badgeId){return `<button class="quick-btn" onclick="setView('${viewName}')"><img src="${iconPath}" class="quick-icon" alt="${title}"><div><b>${title}</b><div class="quick-meta">${subtitle}</div></div><span id="${badgeId}" class="quick-badge ${count>0?'show':''}">${count}</span></button>`;}
-function renderHome(){const house=activeProducts().length,terminated=terminatedProducts().length,exp=expiringProducts().length,expired=expiredProducts().length,cart=cartStats().open,list=shoppingStats().open;return `<div class="top"><div><h2>Ciao, Freddie! 👋</h2><div class="muted">Famiglia: <b>${esc(cfg.familyCode||'offline')}</b> · <span class="sync">...</span></div></div><div class="top-actions"><button class="icon-btn" onclick="openSettings()" title="Impostazioni">⚙️</button><button class="icon-btn logout-top" onclick="logoutFamily()" title="Esci dalla famiglia">🚪</button></div></div><section class="hero"><small>Panoramica oggi</small><h3>Gestione famiglia</h3><div class="metrics"><div class="metric"><button onclick="setView('house')"><b>${house}</b><span>In casa</span></button></div><div class="metric"><button onclick="setView('terminated')"><b>${terminated}</b><span>Articoli terminati</span></button></div><div class="metric"><button onclick="setView('expiring')"><b>${exp}</b><span>In scadenza</span></button></div><div class="metric"><button onclick="setView('expired')"><b>${expired}</b><span>Scaduti</span></button></div></div></section><div class="home-quick">${renderQuickAction('shopping','ui-lista-cat.png','Lista spesa','Da acquistare',list,'badge-shopping-home')}${renderQuickAction('cart','ui-carrello-cat.png','Lista carrello','Da sistemare',cart,'badge-cart-home')}</div><div class="mascot-card"><div><small>Schrodinger Fridge</small><h3>Controlla cosa hai, prima di comprare</h3><p class="muted" style="color:#EDE7F8">Tieni sotto controllo scorte, scadenze e lista della spesa di famiglia.</p></div><div class="mascot-stage"><img src="ui-home-cat.png" class="cat-loop" alt="Gatto animato"></div></div><div class="grid home-grid">${renderCategoryTile('frigo','Frigo','Prodotti da consumare')}${renderCategoryTile('dispensa','Dispensa','Scorte di casa')}${renderCategoryTile('altro','Altro','Prodotti vari')}</div><div class="home-actions-ai"><button class="scan-card" type="button"><b>Scansione scontrino</b><br><span>Fotocamera + AI Vision</span></button><button class="meal-card" type="button" onclick="openMealAI()"><b>Chef AI di casa</b><br><span>3 idee pasto usando frigo, dispensa e scadenze</span></button></div>`;}
+function renderHome(){const house=activeProducts().length,terminated=terminatedProducts().length,exp=expiringProducts().length,expired=expiredProducts().length,cart=cartStats().open,list=shoppingStats().open;return `<div class="top"><div><h2>Ciao, Freddie! 👋</h2><div class="muted">Famiglia: <b>${esc(cfg.familyCode||'offline')}</b> · <span class="sync">...</span></div></div><div class="top-actions"><button class="icon-btn" onclick="openSettings()" title="Impostazioni">⚙️</button><button class="icon-btn logout-top" onclick="logoutFamily()" title="Esci dalla famiglia">🚪</button></div></div><section class="hero"><small>Panoramica oggi</small><h3>Gestione famiglia</h3><div class="metrics"><div class="metric"><button onclick="setView('house')"><b>${house}</b><span>In casa</span></button></div><div class="metric"><button onclick="setView('terminated')"><b>${terminated}</b><span>Articoli terminati</span></button></div><div class="metric"><button onclick="setView('expiring')"><b>${exp}</b><span>In scadenza</span></button></div><div class="metric"><button onclick="setView('expired')"><b>${expired}</b><span>Scaduti</span></button></div></div></section><div class="home-quick">${renderQuickAction('shopping','ui-lista-cat.png','Lista spesa','Da acquistare',list,'badge-shopping-home')}${renderQuickAction('cart','ui-carrello-cat.png','Lista carrello','Da sistemare',cart,'badge-cart-home')}</div><div class="mascot-card"><div><small>Schrodinger Fridge</small><h3>Controlla cosa hai, prima di comprare</h3><p class="muted" style="color:#EDE7F8">Tieni sotto controllo scorte, scadenze e lista della spesa di famiglia.</p></div><div class="mascot-stage"><img src="ui-home-cat.png" class="cat-loop" alt="Gatto animato"></div></div><div class="home-actions-ai"><button class="scan-card" type="button"><b>Scansione scontrino</b><br><span>Fotocamera + AI Vision</span></button><button class="meal-card" type="button" onclick="openMealAI()"><span class="meal-icon-wrap"><img src="ui-chef-ai-cat.png" class="meal-icon" alt="Chef AI"></span><span class="meal-copy"><b>Chef AI di casa</b><br><span>3 idee pasto usando frigo, dispensa e scadenze</span></span></button></div><div class="grid home-grid">${renderCategoryTile('frigo','Frigo','Prodotti da consumare')}${renderCategoryTile('dispensa','Dispensa','Scorte di casa')}${renderCategoryTile('altro','Altro','Prodotti vari')}</div>`;}
         function renderStorage(cat){let items=orderProducts(state.products.filter(x=>x.category===cat));const title=cat==='frigo'?'Frigorifero':cat==='dispensa'?'Dispensa':'Altro';return `<div class="top"><div class="brand"><img src="brand-icon.png" alt=""><h1>${title}</h1></div><span class="sync">...</span></div><input id="search-storage" class="input search" placeholder="Cerca in ${title.toLowerCase()}" value="${esc(searchText)}" oninput="handleSearchInput('search-storage','searchText')">${renderDuplicateAlert(items)}${renderSections(items,'product',cat)}`;}
     function renderNoResults(q,list,cat,label){q=String(q||'').trim();const safe=esc(q);if(q)return `<div class="empty">Nessuna voce trovata.<br><button class="add-link" onclick="openAddModal('${safe}','${list}','${cat||'dispensa'}')">Aggiungi “${safe}”</button></div>`;return `<div class="empty">${label||'Nessuna voce.'} Premi + per aggiungere.</div>`;}
     function renderSections(source,kind,cat){let items=[...source];const q=searchText.trim().toLowerCase();if(q)items=items.filter(x=>itemText(x).includes(q));if(!items.length)return renderNoResults(searchText,'product',cat,'Nessuna voce');const exp=items.filter(isExpiring);const expired=items.filter(isExpired);const done=items.filter(x=>x.checked);const good=items.filter(x=>!x.checked&&!isExpiring(x)&&!isExpired(x));return `${exp.length?`<div class="section-title">In scadenza</div>${exp.map(x=>renderProductItem(x)).join('')}`:''}${good.length?`<div class="section-title">Articolo presente</div>${good.map(x=>renderProductItem(x)).join('')}`:''}${done.length?`<div class="section-title">Terminati</div>${done.map(x=>renderProductItem(x)).join('')}`:''}${expired.length?`<div class="section-title">Scaduti</div>${expired.map(x=>renderProductItem(x)).join('')}`:''}`;}
@@ -266,10 +266,10 @@ function openMealAI(){
       box.innerHTML='<div class="empty">Chef AI sta guardando cosa hai in casa...</div>';
       try{
         const ideas=await fetchMealIdeas();
-        mealIdeas=Array.isArray(ideas)&&ideas.length?ideas:localMealIdeas();
+        mealIdeas=normalizeMealIdeas(Array.isArray(ideas)&&ideas.length?ideas:localMealIdeas());
       }catch(e){
         console.warn('AI pasti fallback locale', e);
-        mealIdeas=localMealIdeas();
+        mealIdeas=normalizeMealIdeas(localMealIdeas());
       }
       renderMealIdeas();
     }
@@ -285,54 +285,103 @@ function openMealAI(){
     function usableProductNames(){
       return state.products.filter(x=>!x.checked&&!isExpired(x)).map(x=>x.name).filter(Boolean);
     }
+    function makeMeal(title,why,used,missing,steps){
+      return {title,why,used:(used||[]).filter(Boolean).slice(0,6),missing:missing||[],steps:steps||[]};
+    }
     function localMealIdeas(){
       const names=usableProductNames();
       const s=names.map(normalizeName).join(' ');
-      const exp=state.products.filter(isExpiring).map(x=>x.name).filter(Boolean).slice(0,4);
-      const has=k=>s.includes(k);
+      const exp=state.products.filter(isExpiring).map(x=>x.name).filter(Boolean).slice(0,5);
+      const hasAny=arr=>arr.some(k=>s.includes(normalizeName(k)));
+      const mealFriendlyExp=exp.filter(n=>!['latte','yogurt','acqua','bibita','succo'].some(k=>normalizeName(n).includes(k)));
       const mood=selectedMood;
       const ideas=[];
-      const baseUsed=exp.filter(n=>!['latte','yogurt','acqua','bibita','succo'].some(k=>normalizeName(n).includes(k)));
-      function add(title,why,used,missing,steps){
-        ideas.push({title,why,used:used.filter(Boolean).slice(0,6),missing:missing||[],steps:steps||[]});
-      }
+      const carbName=hasAny(['pasta'])?'pasta':hasAny(['riso'])?'riso':null;
       if(mood==='malato'){
-        add('Pasta in bianco leggera','Scelta semplice e digeribile, adatta quando non stai bene.',baseUsed,['pasta o riso','parmigiano se gradito'],['Cuoci pasta o riso.','Condisci leggero con olio e poco formaggio.']);
-        add('Brodo caldo con riso o pastina','Pasto caldo, morbido e poco pesante.',baseUsed,['brodo','pastina o riso'],['Prepara un brodo semplice.','Aggiungi riso o pastina e servi caldo.']);
+        ideas.push(makeMeal('Pasta in bianco leggera','Scelta semplice e digeribile, adatta quando non stai bene.',mealFriendlyExp,['pasta','riso','parmigiano'],['Cuoci pasta o riso.','Condisci leggero con olio e poco formaggio.']));
+        ideas.push(makeMeal('Brodo caldo con riso o pastina','Pasto caldo, morbido e poco pesante.',mealFriendlyExp,['brodo','pastina','riso'],['Prepara un brodo semplice.','Aggiungi riso o pastina e servi caldo.']));
       }else if(mood==='stanco'){
-        add('Piatto unico veloce','Poco lavoro, usa quello che hai già e riduce sprechi.',baseUsed,['uova o tonno','pane o riso'],['Unisci una base pronta a una proteina.','Aggiungi verdure disponibili.']);
+        ideas.push(makeMeal('Piatto unico veloce','Poco lavoro, usa quello che hai già e riduce sprechi.',mealFriendlyExp,['uova','tonno','pane','riso'],['Unisci una base pronta a una proteina.','Aggiungi verdure disponibili.']));
       }else if(mood==='triste'){
-        add('Comfort pasta cremosa','Un piatto caldo e appagante, senza complicare la cena.',baseUsed,['pasta','formaggio o verdura'],['Cuoci la pasta.','Manteca con ingrediente cremoso e prodotto in scadenza adatto.']);
+        ideas.push(makeMeal('Comfort pasta cremosa','Un piatto caldo e appagante, senza complicare la cena.',mealFriendlyExp,['pasta','formaggio','verdura'],['Cuoci la pasta.','Manteca con ingrediente cremoso e prodotto in scadenza adatto.']));
       }else if(mood==='arrabbiato'){
-        add('Cena saporita e decisa','Qualcosa di più intenso e soddisfacente.',baseUsed,['spezie','pasta/riso o pane'],['Rosola ingredienti disponibili.','Aggiungi spezie o condimento deciso.']);
+        ideas.push(makeMeal('Cena saporita e decisa','Qualcosa di più intenso e soddisfacente.',mealFriendlyExp,['spezie','pasta','riso','pane'],['Rosola ingredienti disponibili.','Aggiungi spezie o condimento deciso.']));
       }else{
-        add('Pasta svuota-frigo','Usa prima ingredienti in scadenza davvero adatti al pasto.',baseUsed,['pasta'],['Cuoci la pasta.','Salta gli ingredienti in scadenza compatibili.']);
+        ideas.push(makeMeal('Pasta svuota-frigo','Usa prima ingredienti in scadenza davvero adatti al pasto.',mealFriendlyExp,['pasta'],['Cuoci la pasta.','Salta gli ingredienti in scadenza compatibili.']));
       }
-      if(has('uov'))add('Frittata salva-scadenze','Ottima per usare verdure, formaggi o affettati in scadenza.',baseUsed.concat(names.filter(n=>normalizeName(n).includes('uov')).slice(0,1)),['insalata o pane'],['Sbatti le uova.','Aggiungi ingredienti da consumare.','Cuoci in padella.']);
-      else add('Frittata salva-scadenze','Manca solo una base proteica per usare bene gli avanzi.',baseUsed,['uova'],['Aggiungi uova alla lista.','Usa verdure/formaggi in scadenza.']);
-      if(has('pane')||has('prosciutto')||has('formagg'))add('Toast o piadina completa','Soluzione rapida per pranzo/cena leggera.',baseUsed.concat(names.filter(n=>/(pane|prosciutto|formaggio|mozzarella)/.test(normalizeName(n))).slice(0,3)),['insalata o verdura'],['Farcisci pane/piadina.','Scalda e servi con contorno.']);
-      else add('Insalata o bowl completa','Piatto componibile in base a quello che hai.',baseUsed,['insalata','proteina: uova/tonno/legumi'],['Metti una base vegetale.','Completa con proteina e carboidrato.']);
+      if(hasAny(['uova','uovo'])) ideas.push(makeMeal('Frittata salva-scadenze','Ottima per usare verdure, formaggi o affettati in scadenza.',mealFriendlyExp.concat(names.filter(n=>normalizeName(n).includes('uov')).slice(0,1)),['insalata','pane'],['Sbatti le uova.','Aggiungi ingredienti da consumare.','Cuoci in padella.']));
+      else ideas.push(makeMeal('Frittata salva-scadenze','Manca solo una base proteica per usare bene gli avanzi.',mealFriendlyExp,['uova'],['Aggiungi uova alla lista.','Usa verdure/formaggi in scadenza.']));
+      if(hasAny(['pane','piadina','prosciutto','formaggio','mozzarella'])) ideas.push(makeMeal('Toast o piadina completa','Soluzione rapida per pranzo/cena leggera.',mealFriendlyExp.concat(names.filter(n=>/(pane|prosciutto|formaggio|mozzarella|piadina)/.test(normalizeName(n))).slice(0,3)),['pane','piadina','prosciutto','formaggio'],['Farcisci pane o piadina.','Scalda e servi con contorno.']));
+      else ideas.push(makeMeal('Insalata o bowl completa','Piatto componibile in base a quello che hai.',mealFriendlyExp,['insalata','proteina','carboidrato'],['Metti una base vegetale.','Completa con proteina e carboidrato.']));
       return ideas.slice(0,3);
+    }
+    function cleanMissingToken(s){
+      s=String(s||'').trim();
+      s=s.replace(/^da aggiungere\s*:?/i,'').replace(/^aggiungi\s+/i,'');
+      s=s.replace(/\b(se gradito|se vuoi|facoltativo|opzionale)\b/ig,'').trim();
+      s=s.replace(/\.+$/,'').trim();
+      return s;
+    }
+    function splitMissingOptions(s){
+      s=cleanMissingToken(s);
+      if(!s) return [];
+      let norm=' '+s+' ';
+      norm=norm.replace(/\s+oppure\s+/ig,' | ')
+               .replace(/\s+o\s+/ig,' | ')
+               .replace(/\s*\/\s*/g,' | ');
+      const parts=norm.split('|').map(x=>cleanMissingToken(x)).filter(Boolean);
+      return [...new Set(parts)];
+    }
+    function normalizeMealIdeas(ideas){
+      return (ideas||[]).map(m=>{
+        const rawMissing=[];
+        if(Array.isArray(m.missing_groups)){
+          m.missing_groups.forEach(g=>{
+            if(Array.isArray(g?.options)) rawMissing.push(g.options.join(' / '));
+            else if(g?.label) rawMissing.push(g.label);
+          });
+        }
+        if(Array.isArray(m.missing)) rawMissing.push(...m.missing);
+        const missingGroups=rawMissing.map(entry=>{
+          const options=splitMissingOptions(entry);
+          return options.length?{label:cleanMissingToken(entry),options}:null;
+        }).filter(Boolean);
+        const missing=[...new Set(missingGroups.flatMap(g=>g.options))];
+        return {...m, missing_groups:missingGroups, missing};
+      });
     }
     function renderMealIdeas(){
       const box=document.getElementById('meal-result');
       if(!mealIdeas.length){box.innerHTML='<div class="empty">Non ho trovato proposte. Prova un altro umore o aggiungi più prodotti.</div>';return;}
-      box.innerHTML=mealIdeas.map((m,i)=>`<article class="meal-idea"><div class="meal-head"><b>${i+1}. ${esc(m.title||'Pasto consigliato')}</b><span>${esc(selectedMood)}</span></div><p>${esc(m.why||'Proposta basata sugli articoli disponibili.')}</p>${(m.used&&m.used.length)?`<div class="meal-line"><b>Usa:</b> ${m.used.map(esc).join(', ')}</div>`:''}${(m.missing&&m.missing.length)?`<div class="meal-line"><b>Da aggiungere:</b> ${m.missing.map(esc).join(', ')} <button class="add-link" onclick="addMealMissing(${i})">Aggiungi alla lista</button></div>`:''}${(m.steps&&m.steps.length)?`<ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}</article>`).join('');
+      box.innerHTML=mealIdeas.map((m,i)=>`<article class="meal-idea"><div class="meal-head"><b>${i+1}. ${esc(m.title||'Pasto consigliato')}</b><span>${esc(selectedMood)}</span></div><p>${esc(m.why||'Proposta basata sugli articoli disponibili.')}</p>${(m.used&&m.used.length)?`<div class="meal-line"><b>Usa:</b> ${m.used.map(esc).join(', ')}</div>`:''}${(m.missing_groups&&m.missing_groups.length)?`<div class="meal-line"><b>Da aggiungere:</b> ${m.missing_groups.map(g=>esc(g.label||g.options.join(' / '))).join('; ')} <button class="add-link" onclick="openMealMissingChooser(${i})">Scegli cosa aggiungere</button></div>`:''}${(m.steps&&m.steps.length)?`<ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}</article>`).join('');
     }
-    async function addMealMissing(i){
+    function openMealMissingChooser(i){
       const m=mealIdeas[i];
-      const missing=(m&&m.missing)||[];
-      if(!missing.length)return;
-      for(const name of missing){
+      const groups=(m&&m.missing_groups)||[];
+      if(!groups.length) return toast('Nessun ingrediente da aggiungere');
+      pendingMealOptions=groups.map((g,gi)=>({group:gi,label:g.label,options:g.options.map((opt,oi)=>({name:opt,id:`mealopt-${gi}-${oi}`,selected:g.options.length===1}))}));
+      const box=document.getElementById('meal-missing-chooser');
+      box.innerHTML=pendingMealOptions.map((g,gi)=>`<div class="chooser-group"><div class="chooser-title">${esc(g.label||'Ingredienti suggeriti')}</div><div class="chooser-options">${g.options.map((opt,oi)=>`<label class="chooser-option"><input type="checkbox" ${opt.selected?'checked':''} onchange="toggleMealOption(${gi},${oi},this.checked)"><span>${esc(opt.name)}</span></label>`).join('')}</div></div>`).join('');
+      document.getElementById('modal-meal-add').classList.add('open');
+    }
+    function toggleMealOption(gi,oi,val){
+      if(!pendingMealOptions[gi]||!pendingMealOptions[gi].options[oi]) return;
+      pendingMealOptions[gi].options[oi].selected=!!val;
+    }
+    async function confirmMealMissingSelection(){
+      const selected=[...new Set(pendingMealOptions.flatMap(g=>g.options.filter(o=>o.selected).map(o=>cleanMissingToken(o.name))).filter(Boolean))];
+      if(!selected.length) return toast('Seleziona almeno un ingrediente');
+      for(const name of selected){
         const item=normalizeItem({id:newId('shopping'),family_code:cfg.familyCode,list_type:'shopping',name,category:'dispensa',qty:1,unit:'pz',checked:false,added_at:Date.now(),updated_at:Date.now()});
         state.shoppingList.unshift(item);
         await upsertOne(item);
       }
       saveLocal();
+      document.getElementById('modal-meal-add').classList.remove('open');
       render();
       toast('Ingredienti aggiunti alla lista spesa');
     }
-    function openSettings(){document.getElementById('supabase-url').value=cfg.supabaseUrl||DEFAULT_SUPABASE_URL;document.getElementById('supabase-key').value=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;const f=document.getElementById('settings-family');if(f)f.textContent=cfg.familyCode||'offline';document.getElementById('modal-settings').classList.add('open');renderDebug();}
+function openSettings(){document.getElementById('supabase-url').value=cfg.supabaseUrl||DEFAULT_SUPABASE_URL;document.getElementById('supabase-key').value=cfg.supabaseKey||DEFAULT_SUPABASE_KEY;const f=document.getElementById('settings-family');if(f)f.textContent=cfg.familyCode||'offline';document.getElementById('modal-settings').classList.add('open');renderDebug();}
     function saveSettings(){cfg.supabaseUrl=document.getElementById('supabase-url').value.trim()||DEFAULT_SUPABASE_URL;cfg.supabaseKey=document.getElementById('supabase-key').value.trim()||DEFAULT_SUPABASE_KEY;saveConfig();closeAllModals();initSupabase();fullSync();}
     
 
