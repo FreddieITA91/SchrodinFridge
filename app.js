@@ -1,12 +1,12 @@
 'use strict';
-    const APP_VERSION='step18-chef-ai-banner-options-fix-2026-06-02-01';
+    const APP_VERSION='step19-ai-status-recipes-fix-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
     let cfg={familyCode:'',supabaseUrl:DEFAULT_SUPABASE_URL,supabaseKey:DEFAULT_SUPABASE_KEY,offline:false};
     let state=emptyState(), view='home', sb=null, channel=null, lastError='', searchText='', cartSearch='', houseSearch='';
     let selectedCart=new Set(), selectedHouse=new Set(), pendingCategoryAction=null, editingKind=null, editingId=null;
-    let selectedMood='', mealIdeas=[], pendingMealOptions=[];
+    let selectedMood='', mealIdeas=[], pendingMealOptions=[], mealAiMode='';
     let localMutationStamp=0, syncRunning=false, searchRenderTimer=null;
 
     function emptyState(){return{products:[],shoppingList:[],cart:[]};}
@@ -263,12 +263,20 @@ function openMealAI(){
     async function generateMealIdeas(){
       const box=document.getElementById('meal-result');
       if(!selectedMood)return toast('Scegli prima una faccina');
-      box.innerHTML='<div class="empty">Chef AI sta guardando cosa hai in casa...</div>';
+      mealAiMode='loading';
+      box.innerHTML='<div class="empty">Chef AI sta provando a collegarsi alla funzione Supabase...</div>';
       try{
         const ideas=await fetchMealIdeas();
-        mealIdeas=normalizeMealIdeas(Array.isArray(ideas)&&ideas.length?ideas:localMealIdeas());
+        if(Array.isArray(ideas)&&ideas.length){
+          mealAiMode='ai';
+          mealIdeas=normalizeMealIdeas(ideas);
+        }else{
+          mealAiMode='locale';
+          mealIdeas=normalizeMealIdeas(localMealIdeas());
+        }
       }catch(e){
         console.warn('AI pasti fallback locale', e);
+        mealAiMode='locale';
         mealIdeas=normalizeMealIdeas(localMealIdeas());
       }
       renderMealIdeas();
@@ -285,34 +293,106 @@ function openMealAI(){
     function usableProductNames(){
       return state.products.filter(x=>!x.checked&&!isExpired(x)).map(x=>x.name).filter(Boolean);
     }
+    function inventoryItems(){
+      return state.products.filter(x=>!x.checked&&!isExpired(x));
+    }
+    function hasWords(text, words){
+      const s=normalizeName(text);
+      return words.some(w=>s.includes(normalizeName(w)));
+    }
+    function invFind(words){
+      return inventoryItems().filter(x=>hasWords(x.name,words));
+    }
+    function invNames(words,limit=4){
+      return invFind(words).map(x=>x.name).slice(0,limit);
+    }
+    function firstName(words){
+      const f=invFind(words)[0];
+      return f?f.name:'';
+    }
     function makeMeal(title,why,used,missing,steps){
-      return {title,why,used:(used||[]).filter(Boolean).slice(0,6),missing:missing||[],steps:steps||[]};
+      return {title,why,used:[...new Set((used||[]).filter(Boolean))].slice(0,7),missing:missing||[],steps:steps||[]};
+    }
+    function expiringMealIngredients(){
+      return state.products.filter(isExpiring)
+        .filter(x=>!['latte','yogurt','acqua','bibita','succo','coca','fanta','sprite'].some(k=>normalizeName(x.name).includes(k)))
+        .map(x=>x.name)
+        .slice(0,5);
     }
     function localMealIdeas(){
-      const names=usableProductNames();
-      const s=names.map(normalizeName).join(' ');
-      const exp=state.products.filter(isExpiring).map(x=>x.name).filter(Boolean).slice(0,5);
-      const hasAny=arr=>arr.some(k=>s.includes(normalizeName(k)));
-      const mealFriendlyExp=exp.filter(n=>!['latte','yogurt','acqua','bibita','succo'].some(k=>normalizeName(n).includes(k)));
-      const mood=selectedMood;
+      const all=usableProductNames();
+      const s=all.map(normalizeName).join(' ');
+      const has=words=>words.some(w=>s.includes(normalizeName(w)));
+      const exp=expiringMealIngredients();
+      const veg=invNames(['insalata','lattuga','verdura','zucchina','zucchine','carota','carote','pomodoro','pomodori','spinaci','rucola','peperone','peperoni','melanzana','broccoli']);
+      const cheese=invNames(['formaggio','mozzarella','ricotta','parmigiano','grana','pecorino','stracchino']);
+      const coldCuts=invNames(['prosciutto','salame','mortadella','speck','bresaola','affettato']);
+      const eggs=invNames(['uova','uovo']);
+      const pasta=firstName(['pasta','spaghetti','penne','fusilli','rigatoni','maccheroni']);
+      const rice=firstName(['riso','risotto']);
+      const bread=firstName(['pane','panino','toast','piadina','focaccia']);
+      const fish=invNames(['tonno','salmone','pesce','merluzzo','gamberi']);
+      const meat=invNames(['pollo','tacchino','carne','manzo','salsiccia','hamburger']);
       const ideas=[];
-      const carbName=hasAny(['pasta'])?'pasta':hasAny(['riso'])?'riso':null;
-      if(mood==='malato'){
-        ideas.push(makeMeal('Pasta in bianco leggera','Scelta semplice e digeribile, adatta quando non stai bene.',mealFriendlyExp,['pasta','riso','parmigiano'],['Cuoci pasta o riso.','Condisci leggero con olio e poco formaggio.']));
-        ideas.push(makeMeal('Brodo caldo con riso o pastina','Pasto caldo, morbido e poco pesante.',mealFriendlyExp,['brodo','pastina','riso'],['Prepara un brodo semplice.','Aggiungi riso o pastina e servi caldo.']));
-      }else if(mood==='stanco'){
-        ideas.push(makeMeal('Piatto unico veloce','Poco lavoro, usa quello che hai già e riduce sprechi.',mealFriendlyExp,['uova','tonno','pane','riso'],['Unisci una base pronta a una proteina.','Aggiungi verdure disponibili.']));
-      }else if(mood==='triste'){
-        ideas.push(makeMeal('Comfort pasta cremosa','Un piatto caldo e appagante, senza complicare la cena.',mealFriendlyExp,['pasta','formaggio','verdura'],['Cuoci la pasta.','Manteca con ingrediente cremoso e prodotto in scadenza adatto.']));
-      }else if(mood==='arrabbiato'){
-        ideas.push(makeMeal('Cena saporita e decisa','Qualcosa di più intenso e soddisfacente.',mealFriendlyExp,['spezie','pasta','riso','pane'],['Rosola ingredienti disponibili.','Aggiungi spezie o condimento deciso.']));
-      }else{
-        ideas.push(makeMeal('Pasta svuota-frigo','Usa prima ingredienti in scadenza davvero adatti al pasto.',mealFriendlyExp,['pasta'],['Cuoci la pasta.','Salta gli ingredienti in scadenza compatibili.']));
+      const push=m=>{ if(m&&m.title&&!ideas.some(x=>x.title===m.title)) ideas.push(m); };
+
+      if(selectedMood==='malato'){
+        if(rice || pasta){
+          const base=rice||pasta;
+          push(makeMeal(`${base} leggero con olio e parmigiano`,'Piatto semplice e digeribile: adatto se non stai bene e non vuoi appesantirti.',[base,...cheese.slice(0,1)],cheese.length?[]:['parmigiano'],[`Cuoci ${base} molto morbido.`,`Condisci con poco olio e ${cheese[0]||'parmigiano'}.`,'Servi caldo e leggero.']));
+        }else{
+          push(makeMeal('Riso o pastina in brodo','È la scelta più coerente se sei malato: calda, semplice e poco pesante.',[],['riso','pastina','brodo'],['Prepara un brodo semplice.','Aggiungi riso o pastina.','Servi caldo.']));
+        }
+        if(veg.length) push(makeMeal('Vellutata leggera con verdure disponibili','Usa verdure disponibili senza trasformarle in un piatto pesante.',veg,['brodo o patata'],['Cuoci le verdure con poca acqua o brodo.','Frulla fino a crema.','Aggiungi olio a crudo.']));
       }
-      if(hasAny(['uova','uovo'])) ideas.push(makeMeal('Frittata salva-scadenze','Ottima per usare verdure, formaggi o affettati in scadenza.',mealFriendlyExp.concat(names.filter(n=>normalizeName(n).includes('uov')).slice(0,1)),['insalata','pane'],['Sbatti le uova.','Aggiungi ingredienti da consumare.','Cuoci in padella.']));
-      else ideas.push(makeMeal('Frittata salva-scadenze','Manca solo una base proteica per usare bene gli avanzi.',mealFriendlyExp,['uova'],['Aggiungi uova alla lista.','Usa verdure/formaggi in scadenza.']));
-      if(hasAny(['pane','piadina','prosciutto','formaggio','mozzarella'])) ideas.push(makeMeal('Toast o piadina completa','Soluzione rapida per pranzo/cena leggera.',mealFriendlyExp.concat(names.filter(n=>/(pane|prosciutto|formaggio|mozzarella|piadina)/.test(normalizeName(n))).slice(0,3)),['pane','piadina','prosciutto','formaggio'],['Farcisci pane o piadina.','Scalda e servi con contorno.']));
-      else ideas.push(makeMeal('Insalata o bowl completa','Piatto componibile in base a quello che hai.',mealFriendlyExp,['insalata','proteina','carboidrato'],['Metti una base vegetale.','Completa con proteina e carboidrato.']));
+
+      if(selectedMood==='stanco'){
+        if(eggs.length && (veg.length || cheese.length || coldCuts.length)){
+          push(makeMeal('Frittata veloce svuota-frigo','Pochi passaggi e buona resa: ideale quando sei stanco.',[...eggs,...exp,...veg.slice(0,2),...cheese.slice(0,1),...coldCuts.slice(0,1)],[],['Sbatti le uova.','Aggiungi ingredienti disponibili da consumare.','Cuoci in padella 6-8 minuti.']));
+        }
+        if(bread && (coldCuts.length || cheese.length || veg.length)){
+          push(makeMeal(`${bread} farcito rapido`,'Soluzione pratica e veloce con ingredienti già presenti.',[bread,...coldCuts.slice(0,2),...cheese.slice(0,1),...veg.slice(0,1)],[],[`Farcisci ${bread}.`,'Scalda se vuoi un piatto più comfort.','Aggiungi verdura come contorno.']));
+        }
+      }
+
+      if(selectedMood==='triste'){
+        if(pasta && (cheese.length || veg.length || coldCuts.length || exp.length)){
+          push(makeMeal(`Pasta comfort con ${cheese[0]||veg[0]||coldCuts[0]||exp[0]}`,'Comfort food più concreto: caldo, semplice e con ingredienti realmente disponibili.',[pasta,...cheese.slice(0,2),...veg.slice(0,2),...coldCuts.slice(0,1),...exp.slice(0,2)],[],[`Cuoci ${pasta}.`,'Usa l’ingrediente principale come condimento caldo.','Manteca con poca acqua di cottura.']));
+        }
+      }
+
+      if(selectedMood==='arrabbiato'){
+        if(pasta || rice){
+          const base=pasta||rice;
+          push(makeMeal(`${base} saporito anti-spreco`,'Un piatto più deciso ma ancora pratico, usando ciò che hai.',[base,...veg.slice(0,2),...coldCuts.slice(0,1),...cheese.slice(0,1),...exp.slice(0,2)],['spezie o peperoncino'],[`Cuoci ${base}.`,'Salta il condimento in padella.','Aggiungi spezie/peperoncino se ti va.']));
+        }
+      }
+
+      if(pasta && (veg.length || cheese.length || coldCuts.length || fish.length || meat.length || exp.length)){
+        push(makeMeal(`Pasta con ${[...veg,...cheese,...coldCuts,...fish,...meat,...exp][0]}`,'Primo concreto basato sugli ingredienti che risultano presenti.',[pasta,...veg.slice(0,2),...cheese.slice(0,1),...coldCuts.slice(0,1),...fish.slice(0,1),...meat.slice(0,1),...exp.slice(0,2)],[],[`Cuoci ${pasta}.`,'Prepara il condimento con gli ingredienti indicati.','Unisci e salta un minuto.']));
+      }else if(!pasta && (veg.length || cheese.length || coldCuts.length || exp.length)){
+        push(makeMeal('Pasta salva-scadenze da completare','Hai ingredienti utili, ma manca una base per trasformarli in un pasto completo.',[...veg.slice(0,2),...cheese.slice(0,1),...coldCuts.slice(0,1),...exp.slice(0,2)],['pasta'],['Aggiungi pasta alla lista.','Usa gli ingredienti disponibili come condimento.']));
+      }
+
+      if(eggs.length){
+        push(makeMeal('Frittata con prodotti da consumare','Piatto reale e flessibile: ottimo per usare ingredienti in scadenza.',[...eggs,...exp,...veg.slice(0,2),...cheese.slice(0,1),...coldCuts.slice(0,1)],[],['Sbatti le uova.','Aggiungi ingredienti tagliati piccoli.','Cuoci in padella o forno.']));
+      }else if(veg.length || cheese.length || coldCuts.length || exp.length){
+        push(makeMeal('Frittata salva-scadenze da completare','Manca solo la base proteica per usare bene gli ingredienti disponibili.',[...veg.slice(0,2),...cheese.slice(0,1),...coldCuts.slice(0,1),...exp.slice(0,2)],['uova'],['Aggiungi uova alla lista.','Usa gli ingredienti disponibili nella frittata.']));
+      }
+
+      if(bread && (coldCuts.length || cheese.length || veg.length)){
+        push(makeMeal(`${bread} con ${coldCuts[0]||cheese[0]||veg[0]}`,'Pasto rapido, ma consigliato solo perché hai già una base tipo pane/piadina/toast.',[bread,...coldCuts.slice(0,2),...cheese.slice(0,1),...veg.slice(0,1)],[],[`Farcisci ${bread}.`,'Scalda o servi freddo.','Aggiungi verdura se disponibile.']));
+      }else if((coldCuts.length || cheese.length) && !bread){
+        push(makeMeal('Toast/piadina da completare','Hai il ripieno, ma manca una base: scegli tu cosa comprare.',[...coldCuts.slice(0,2),...cheese.slice(0,1)],['pane / piadina / toast'],['Scegli una base da aggiungere alla lista.','Farcisci con gli ingredienti già presenti.']));
+      }
+
+      if(veg.length && (fish.length || meat.length || cheese.length || eggs.length)){
+        push(makeMeal('Bowl o insalata completa','Proposta più fresca e modulabile con quello che hai davvero.',[...veg.slice(0,3),...fish.slice(0,1),...meat.slice(0,1),...cheese.slice(0,1),...eggs.slice(0,1)],[(pasta||rice||bread)?'':'pane / riso'],['Prepara una base con verdure.','Aggiungi la proteina disponibile.','Completa con carboidrato se serve.']));
+      }
+
+      while(ideas.length<3){
+        ideas.push(makeMeal('Piatto semplice da completare','Non ci sono abbastanza ingredienti chiari per una ricetta specifica.',exp,['pasta','uova','verdura'],['Aggiungi una base alla lista.','Usa prima eventuali prodotti in scadenza adatti.']));
+      }
       return ideas.slice(0,3);
     }
     function cleanMissingToken(s){
@@ -353,7 +433,10 @@ function openMealAI(){
     function renderMealIdeas(){
       const box=document.getElementById('meal-result');
       if(!mealIdeas.length){box.innerHTML='<div class="empty">Non ho trovato proposte. Prova un altro umore o aggiungi più prodotti.</div>';return;}
-      box.innerHTML=mealIdeas.map((m,i)=>`<article class="meal-idea"><div class="meal-head"><b>${i+1}. ${esc(m.title||'Pasto consigliato')}</b><span>${esc(selectedMood)}</span></div><p>${esc(m.why||'Proposta basata sugli articoli disponibili.')}</p>${(m.used&&m.used.length)?`<div class="meal-line"><b>Usa:</b> ${m.used.map(esc).join(', ')}</div>`:''}${(m.missing_groups&&m.missing_groups.length)?`<div class="meal-line"><b>Da aggiungere:</b> ${m.missing_groups.map(g=>esc(g.label||g.options.join(' / '))).join('; ')} <button class="add-link" onclick="openMealMissingChooser(${i})">Scegli cosa aggiungere</button></div>`:''}${(m.steps&&m.steps.length)?`<ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}</article>`).join('');
+      const mode=mealAiMode==='ai'
+        ? '<div class="meal-ai-status ai">AI collegata: proposte generate online</div>'
+        : '<div class="meal-ai-status local">Modalità locale: funzione AI non collegata o non disponibile</div>';
+      box.innerHTML=mode+mealIdeas.map((m,i)=>`<article class="meal-idea"><div class="meal-head"><b>${i+1}. ${esc(m.title||'Pasto consigliato')}</b><span>${esc(selectedMood)}</span></div><p>${esc(m.why||'Proposta basata sugli articoli disponibili.')}</p>${(m.used&&m.used.length)?`<div class="meal-line"><b>Usa:</b> ${m.used.map(esc).join(', ')}</div>`:''}${(m.missing_groups&&m.missing_groups.length)?`<div class="meal-line"><b>Da aggiungere:</b> ${m.missing_groups.map(g=>esc(g.label||g.options.join(' / '))).join('; ')} <button class="add-link" onclick="openMealMissingChooser(${i})">Scegli cosa aggiungere</button></div>`:''}${(m.steps&&m.steps.length)?`<ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}</article>`).join('');
     }
     function openMealMissingChooser(i){
       const m=mealIdeas[i];
