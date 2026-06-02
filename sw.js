@@ -1,4 +1,4 @@
-const CACHE_NAME = 'schrodingerfridge-step19-v1';
+const CACHE_NAME = 'schrodingerfridge-step20-v1';
 self.addEventListener('install', event => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil((async()=>{
   const keys = await caches.keys();

@@ -1,5 +1,5 @@
 'use strict';
-    const APP_VERSION='step19-ai-status-recipes-fix-2026-06-02-01';
+    const APP_VERSION='step20-gemini-ai-studio-meals-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
@@ -434,8 +434,8 @@ function openMealAI(){
       const box=document.getElementById('meal-result');
       if(!mealIdeas.length){box.innerHTML='<div class="empty">Non ho trovato proposte. Prova un altro umore o aggiungi più prodotti.</div>';return;}
       const mode=mealAiMode==='ai'
-        ? '<div class="meal-ai-status ai">AI collegata: proposte generate online</div>'
-        : '<div class="meal-ai-status local">Modalità locale: funzione AI non collegata o non disponibile</div>';
+        ? '<div class="meal-ai-status ai">Gemini AI collegata: proposte generate online</div>'
+        : '<div class="meal-ai-status local">Modalità locale: Gemini non collegata o non disponibile</div>';
       box.innerHTML=mode+mealIdeas.map((m,i)=>`<article class="meal-idea"><div class="meal-head"><b>${i+1}. ${esc(m.title||'Pasto consigliato')}</b><span>${esc(selectedMood)}</span></div><p>${esc(m.why||'Proposta basata sugli articoli disponibili.')}</p>${(m.used&&m.used.length)?`<div class="meal-line"><b>Usa:</b> ${m.used.map(esc).join(', ')}</div>`:''}${(m.missing_groups&&m.missing_groups.length)?`<div class="meal-line"><b>Da aggiungere:</b> ${m.missing_groups.map(g=>esc(g.label||g.options.join(' / '))).join('; ')} <button class="add-link" onclick="openMealMissingChooser(${i})">Scegli cosa aggiungere</button></div>`:''}${(m.steps&&m.steps.length)?`<ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}</article>`).join('');
     }
     function openMealMissingChooser(i){
