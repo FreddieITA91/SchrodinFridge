@@ -1,5 +1,5 @@
 'use strict';
-    const APP_VERSION='step15-smart-icons-expiring-logout-ui-2026-06-02-01';
+    const APP_VERSION='step16-render-tabs-normalize-fix-2026-06-02-01';
     const DEFAULT_SUPABASE_URL='https://evaftivdtyoaezxzzyml.supabase.co';
     const CFG_KEY='sf_step5_cfg';
     const DEFAULT_SUPABASE_KEY='sb_publishable_u2yNGf01RAfKIjYl0RBKFw_6wH2Q5Ww';
@@ -175,6 +175,15 @@ function renderHome(){const house=activeProducts().length,terminated=terminatedP
     function fmtQty(it){return `${Number(it.qty||1)} ${esc(it.unit||'pz')}`;}
     function catLabel(c){return c==='frigo'?'Frigorifero':c==='dispensa'?'Dispensa':'Altro';}
     function itemText(x){return `${x.name} ${x.category} ${x.notes} ${x.qty} ${x.unit} ${x.expiry}`.toLowerCase();}
+    function normalizeName(v){
+      return String(v||'')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-z0-9\s]/g,' ')
+        .replace(/\s+/g,' ')
+        .trim();
+    }
     function itemIconEmoji(name){
       const s=normalizeName(name);
       const rules=[
